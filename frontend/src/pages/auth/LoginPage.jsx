@@ -9,7 +9,15 @@ import {
   PrimaryButton,
 } from '../../components/auth/AuthComponents'
 
-export default function LoginPage() {
+const demoAccounts = {
+  sale01: { password: 'demo123', role: 'sale', path: '/sale' },
+  quanly01: { password: 'demo123', role: 'quanly', path: '/quan-ly' },
+  ketoan01: { password: 'demo123', role: 'ketoan', path: '/ke-toan' },
+  phutrach01: { password: 'demo123', role: 'phutrach', path: '/phu-trach' },
+  admin01: { password: 'demo123', role: 'admin', path: '/admin' },
+}
+
+export default function LoginPage({ setRole = () => {} }) {
   const navigate = useNavigate()
 
   const [form, setForm] = useState({ username: '', password: '' })
@@ -47,6 +55,31 @@ export default function LoginPage() {
       else sessionStorage.setItem('token', data.token)
 
       navigate('/dashboard')
+      const username = form.username.trim().toLowerCase()
+      const account = demoAccounts[username]
+
+      await new Promise(r => setTimeout(r, 350))
+
+      if (!account || account.password !== form.password) {
+        setErrors({ general: 'Tên đăng nhập hoặc mật khẩu không đúng.' })
+        return
+      }
+
+      const storage = remember ? localStorage : sessionStorage
+      const staleStorage = remember ? sessionStorage : localStorage
+      const user = { username, role: account.role }
+
+      staleStorage.removeItem('token')
+      staleStorage.removeItem('role')
+      staleStorage.removeItem('user')
+      storage.setItem('token', `demo-token-${account.role}`)
+      storage.setItem('role', account.role)
+      storage.setItem('user', JSON.stringify(user))
+
+      setRole(account.role)
+      navigate(account.path, { replace: true })
+
+      // TODO: thay demoAccounts bằng API thật khi backend auth sẵn sàng.
     } catch (err) {
       setErrors({ general: err.message || 'Tên đăng nhập hoặc mật khẩu không đúng.' })
     } finally {
