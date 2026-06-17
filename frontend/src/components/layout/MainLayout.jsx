@@ -15,11 +15,11 @@ export default function MainLayout({ role, setRole }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <Sidebar role={role} />
-      <div className="flex-1">
+    <div className="flex min-h-screen bg-[#f4f4f4] text-[#182016]">
+      <Sidebar role={role} onLogout={handleLogout} />
+      <div className="min-w-0 flex-1">
         <Header role={role} onLogout={handleLogout} />
-        <main className="p-6">
+        <main className="w-full px-[25px] pb-16 pt-[90px]">
           <Outlet />
         </main>
       </div>

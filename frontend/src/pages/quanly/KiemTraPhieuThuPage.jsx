@@ -1,10 +1,10 @@
 import PageTitle from '../../components/common/PageTitle.jsx'
 import PlaceholderTable from '../../components/common/PlaceholderTable.jsx'
 
-export default function BoiThuongPage() {
+export default function KiemTraPhieuThuPage() {
   return (
     <section>
-      <PageTitle title="Ghi nhận bồi thường" description="Ghi nhận bồi thường thẻ/chìa khóa." />
+      <PageTitle title="Kiểm tra phiếu thu" description="Rà soát thông tin phiếu thu liên quan." />
       <PlaceholderTable />
     </section>
   )

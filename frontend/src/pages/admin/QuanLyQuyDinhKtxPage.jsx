@@ -1,10 +1,10 @@
 import PageTitle from '../../components/common/PageTitle.jsx'
 import PlaceholderTable from '../../components/common/PlaceholderTable.jsx'
 
-export default function BoiThuongPage() {
+export default function QuanLyQuyDinhKtxPage() {
   return (
     <section>
-      <PageTitle title="Ghi nhận bồi thường" description="Ghi nhận bồi thường thẻ/chìa khóa." />
+      <PageTitle title="Quản lý quy định KTX" description="Quản lý nội quy và quy định vận hành KTX." />
       <PlaceholderTable />
     </section>
   )
