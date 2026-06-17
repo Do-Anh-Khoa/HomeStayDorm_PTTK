@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Schema demo tối giản. Nhóm sẽ bổ sung theo ERD chính thức.
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  fullName  String
+  role      String
+  createdAt DateTime @default(now())
+}
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String?
+  rooms     Room[]
+  createdAt DateTime @default(now())
+}
+
+model Room {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  roomType  String?
+  status    String   @default("TRONG")
+  branchId  Int?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  beds      Bed[]
+  createdAt DateTime @default(now())
+}
+
+model Bed {
+  id        Int      @id @default(autoincrement())
+  code      String
+  status    String   @default("TRONG")
+  roomId    Int
+  room      Room     @relation(fields: [roomId], references: [id])
+  createdAt DateTime @default(now())
+}

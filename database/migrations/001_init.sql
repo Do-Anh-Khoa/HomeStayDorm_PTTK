@@ -1,0 +1,35 @@
+-- Script tạo CSDL demo tối giản.
+-- Nhóm có thể thay bằng script chính thức sau khi chốt ERD.
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS branches (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  address TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rooms (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(50) UNIQUE NOT NULL,
+  room_type VARCHAR(100),
+  status VARCHAR(50) DEFAULT 'TRONG',
+  branch_id INT REFERENCES branches(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS beds (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(50) NOT NULL,
+  status VARCHAR(50) DEFAULT 'TRONG',
+  room_id INT REFERENCES rooms(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
