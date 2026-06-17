@@ -1,41 +1,131 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { roleLabels } from '../../data/menuByRole.js'
+import { S } from '../../styles/tokens'
+import {
+  InputField,
+  RightPanel,
+  TopBar,
+  BottomBar,
+  PrimaryButton,
+} from '../../components/auth/AuthComponents'
 
-export default function LoginPage({ setRole }) {
+export default function LoginPage() {
   const navigate = useNavigate()
 
-  const handleLogin = (selectedRole) => {
-    setRole(selectedRole)
-    const defaultPaths = {
-      sale: '/sale',
-      quanly: '/quan-ly',
-      ketoan: '/ke-toan',
-      phutrach: '/phu-trach',
-      admin: '/admin',
+  const [form, setForm] = useState({ username: '', password: '' })
+  const [showPw, setShowPw] = useState(false)
+  const [remember, setRemember] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+
+  // ---- Validation ----
+  const validate = () => {
+    const e = {}
+    if (!form.username.trim()) e.username = 'Vui lòng nhập tài khoản.'
+    if (!form.password)        e.password = 'Vui lòng nhập mật khẩu.'
+    return e
+  }
+
+  // ---- Submit ----
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const e2 = validate()
+    if (Object.keys(e2).length) { setErrors(e2); return }
+    setErrors({})
+    setLoading(true)
+
+    try {
+        if (remember) {
+            localStorage.setItem('token', res.data.token)
+        } else {
+            sessionStorage.setItem('token', res.data.token)
+        }
+      // TODO: thay bằng API thật
+      // const res = await axios.post('/api/auth/login', {
+      //   username: form.username,
+      //   password: form.password,
+      // })
+      // navigate('/dashboard')
+
+      await new Promise(r => setTimeout(r, 1200)) // giả lập delay
+      alert('Đăng nhập thành công! (chưa kết nối API)')
+    } catch (err) {
+      setErrors({ general: 'Tên đăng nhập hoặc mật khẩu không đúng.' })
+    } finally {
+      setLoading(false)
     }
-    navigate(defaultPaths[selectedRole])
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-        <h1 className="text-2xl font-bold text-slate-900">Đăng nhập demo</h1>
-        <p className="text-slate-500 mt-2">
-          Chọn vai trò để xem giao diện tương ứng. Sau này phần này sẽ nối API đăng nhập thật.
-        </p>
+    <div style={S.page}>
+      {/* LEFT */}
+      <div style={S.leftPanel}>
+        <TopBar />
 
-        <div className="mt-6 space-y-3">
-          {Object.entries(roleLabels).map(([role, label]) => (
-            <button
-              key={role}
-              onClick={() => handleLogin(role)}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-left hover:bg-blue-50 hover:border-blue-300 transition"
-            >
-              {label}
-            </button>
-          ))}
+        <div style={S.formWrap}>
+          <h1 style={S.heading}>Chào mừng trở lại</h1>
+          <p style={S.subheading}>Đăng nhập hệ thống Homestay Dorm</p>
+
+          {errors.general && (
+            <p style={{ ...S.errorMsg, marginBottom: '16px', fontSize: '13.5px' }}>
+              ⚠️ {errors.general}
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate>
+            <InputField
+              label="Số điện thoại / Email / Tên đăng nhập"
+              type="text"
+              placeholder="Nhập tài khoản của bạn"
+              value={form.username}
+              onChange={e => setForm({ ...form, username: e.target.value })}
+              error={errors.username}
+            />
+
+            <InputField
+              label="Mật khẩu"
+              placeholder="Nhập mật khẩu"
+              value={form.password}
+              onChange={e => setForm({ ...form, password: e.target.value })}
+              error={errors.password}
+              showToggle
+              show={showPw}
+              onToggle={() => setShowPw(!showPw)}
+            />
+
+            <div style={S.rowBetween}>
+              <label style={S.checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={e => setRemember(e.target.checked)}
+                  style={S.checkbox}
+                />
+                Ghi nhớ tài khoản
+              </label>
+              <button
+                type="button"
+                style={S.linkBtn}
+                onClick={() => navigate('/forgot-password')}
+              >
+                Quên mật khẩu?
+              </button>
+            </div>
+
+            <PrimaryButton loading={loading}>
+              Đăng nhập hệ thống
+            </PrimaryButton>
+          </form>
         </div>
+
+        <BottomBar />
       </div>
+
+      {/* RIGHT */}
+      <RightPanel
+        title={'Hành trình mới\nBắt đầu từ đây.'}
+        subtitle="Trải nghiệm không gian sống hiện đại và tinh tế tại hệ thống ký túc xá homestay hàng đầu."
+      />
     </div>
   )
 }
