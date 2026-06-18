@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import api from '../../services/api'
 import { S, C } from '../../styles/tokens'
 import {
   InputField,
@@ -47,16 +48,15 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-    const res = await fetch('http://localhost:3000/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword: form.password }),
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message)
-    setDone(true)
+      await api.post('/auth/reset-password', {
+        token,
+        newPassword: form.password,
+      })
+      setDone(true)
     } catch (err) {
-    setErrors({ general: err.message || 'Link đã hết hạn hoặc không hợp lệ.' })
+      setErrors({
+        general: err.response?.data?.message || err.message || 'Link đã hết hạn hoặc không hợp lệ.',
+      })
     } finally {
       setLoading(false)
     }

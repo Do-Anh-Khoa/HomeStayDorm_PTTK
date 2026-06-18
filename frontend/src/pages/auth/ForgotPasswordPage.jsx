@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../../services/api'
 import { S } from '../../styles/tokens'
 import {
   InputField,
@@ -27,18 +28,12 @@ export default function ForgotPasswordPage() {
     setLoading(true)
 
     try {
-      const res = await fetch('http://localhost:3000/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    const data = await res.json()
-        if (!res.ok) { setError(data.message || 'Có lỗi xảy ra.'); return }
-        setSent(true)
+      await api.post('/auth/forgot-password', { email })
+      setSent(true)
     } catch (err) {
-        setError('Không thể kết nối server. Vui lòng thử lại.')
+      setError(err.response?.data?.message || 'Không thể kết nối server. Vui lòng thử lại.')
     } finally {
-        setLoading(false)
+      setLoading(false)
     }
   }
 

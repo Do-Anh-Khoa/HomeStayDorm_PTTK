@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../../services/api'
 import { S } from '../../styles/tokens'
 import {
   InputField,
@@ -55,13 +56,10 @@ export default function LoginPage({ setRole = () => {} }) {
     setLoading(true)
 
     try {
-      const res = await fetch('http://localhost:3000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: form.username, password: form.password }),
+      const { data } = await api.post('/auth/login', {
+        username: form.username,
+        password: form.password,
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
 
       // Dịch loai_nv (SALE/QL/KT/PT/ADMIN) sang key mà AppRoutes đang dùng
       const roleKey = ROLE_KEY_MAP[data.user.loai_nv] || ''
@@ -83,7 +81,9 @@ export default function LoginPage({ setRole = () => {} }) {
       navigate(ROLE_ROUTES[roleKey] || '/login', { replace: true })
 
     } catch (err) {
-      setErrors({ general: err.message || 'Có lỗi xảy ra khi kết nối hệ thống.' })
+      setErrors({
+        general: err.response?.data?.message || err.message || 'Có lỗi xảy ra khi kết nối hệ thống.',
+      })
     } finally {
       setLoading(false)
     }
