@@ -1,5 +1,4 @@
-export function login(req, res) {
-  const { username, role } = req.body
+
 
   if (!username || !role) {
     return res.status(400).json({ message: 'Thiếu username hoặc role' })
