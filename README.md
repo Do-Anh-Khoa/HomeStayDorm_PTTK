@@ -51,10 +51,6 @@ git branch -M main
 git remote add origin <link-repo-github>
 git push -u origin main
 ```
-<<<<<<< HEAD
-
-=======
->>>>>>> 5c8a85f (Update README with GitHub workflow and commit rules)
 ## Quy trình làm việc trên GitHub (Nhiều người làm)
 
 ### 1. Luồng làm việc chính (Git Flow)
