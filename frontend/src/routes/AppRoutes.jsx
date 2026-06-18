@@ -41,18 +41,43 @@ import QuanLyQuyDinhHoanCocPage from '../pages/admin/QuanLyQuyDinhHoanCocPage.js
 import QuanLyQuyDinhKtxPage from '../pages/admin/QuanLyQuyDinhKtxPage.jsx'
 import QuanLyVatDungPage from '../pages/admin/QuanLyVatDungPage.jsx'
 
+// Map role với prefix path
 const defaultPathByRole = {
-  sale: '/sale',
-  quanly: '/quan-ly',
-  ketoan: '/ke-toan',
+  sale:     '/sale',
+  quanly:   '/quan-ly',
+  ketoan:   '/ke-toan',
   phutrach: '/phu-trach',
-  admin: '/admin',
+  admin:    '/admin',
+}
+
+// Map loai_nv từ DB → role string dùng trong app
+export const loaiNvToRole = {
+  SALE:  'sale',
+  QL:    'quanly',
+  KT:    'ketoan',
+  PT:    'phutrach',
+  ADMIN: 'admin',
 }
 
 function getStoredRole() {
   return localStorage.getItem('role') || sessionStorage.getItem('role') || ''
 }
 
+// ProtectedRoute: chặn user vào route không thuộc role của họ
+function ProtectedRoute({ allowedRole, currentRole, children }) {
+  // Chưa đăng nhập
+  if (!currentRole) {
+    return <Navigate to="/login" replace />
+  }
+  // Đăng nhập nhưng sai role
+  if (currentRole !== allowedRole) {
+    const correctPath = defaultPathByRole[currentRole] || '/login'
+    return <Navigate to={correctPath} replace />
+  }
+  return children
+}
+
+// AppRoutes
 export default function AppRoutes() {
   const [role, setRoleState] = useState(getStoredRole)
 
@@ -65,7 +90,6 @@ export default function AppRoutes() {
       sessionStorage.removeItem('role')
       sessionStorage.removeItem('user')
     }
-
     setRoleState(nextRole)
   }
 
@@ -73,7 +97,10 @@ export default function AppRoutes() {
 
   return (
     <Routes>
+      {/* Trang chủ → redirect theo role */}
       <Route path="/" element={<Navigate to={homePath} replace />} />
+
+      {/* Auth pages — không cần đăng nhập */}
       <Route
         path="/login"
         element={role ? <Navigate to={homePath} replace /> : <LoginPage setRole={setRole} />}
@@ -81,14 +108,30 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route element={<MainLayout role={role} setRole={setRole} />}>
+      {/* SALE */}
+      <Route
+        element={
+          <ProtectedRoute allowedRole="sale" currentRole={role}>
+            <MainLayout role={role} setRole={setRole} />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/sale" element={<DashboardSale />} />
         <Route path="/sale/ho-so-dang-ky" element={<HoSoDangKyPage />} />
         <Route path="/sale/tra-cuu-phong-giuong" element={<TraCuuPhongGiuongPage />} />
         <Route path="/sale/lich-xem-phong" element={<LichXemPhongPage />} />
         <Route path="/sale/phieu-dat-coc" element={<PhieuDatCocPage />} />
         <Route path="/sale/tra-phong" element={<TraPhongPage />} />
+      </Route>
 
+      {/* QUẢN LÝ */}
+      <Route
+        element={
+          <ProtectedRoute allowedRole="quanly" currentRole={role}>
+            <MainLayout role={role} setRole={setRole} />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/quan-ly" element={<DashboardQuanLy />} />
         <Route path="/quan-ly/tra-cuu-phong-giuong" element={<TraCuuPhongGiuongQuanLyPage />} />
         <Route path="/quan-ly/ban-giao" element={<BanGiaoPage />} />
@@ -97,15 +140,42 @@ export default function AppRoutes() {
         <Route path="/quan-ly/kiem-tra-phieu-thu" element={<KiemTraPhieuThuPage />} />
         <Route path="/quan-ly/cap-nhat-phieu-thu" element={<CapNhatPhieuThuPage />} />
         <Route path="/quan-ly/boi-thuong" element={<BoiThuongPage />} />
+      </Route>
 
+      {/* KẾ TOÁN  */}
+      <Route
+        element={
+          <ProtectedRoute allowedRole="ketoan" currentRole={role}>
+            <MainLayout role={role} setRole={setRole} />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/ke-toan" element={<DashboardKeToan />} />
         <Route path="/ke-toan/phieu-thu" element={<PhieuThuPage />} />
         <Route path="/ke-toan/dich-vu-hang-thang" element={<DichVuHangThangPage />} />
         <Route path="/ke-toan/xac-nhan-thanh-toan" element={<XacNhanThanhToanPage />} />
+      </Route>
 
+      {/*  PHỤ TRÁCH  */}
+      <Route
+        element={
+          <ProtectedRoute allowedRole="phutrach" currentRole={role}>
+            <MainLayout role={role} setRole={setRole} />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/phu-trach" element={<DashboardPhuTrach />} />
         <Route path="/phu-trach/hop-dong" element={<HopDongPage />} />
+      </Route>
 
+      {/*  ADMIN  */}
+      <Route
+        element={
+          <ProtectedRoute allowedRole="admin" currentRole={role}>
+            <MainLayout role={role} setRole={setRole} />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/admin" element={<DashboardAdmin />} />
         <Route path="/admin/nguoi-dung" element={<QuanLyNguoiDungPage />} />
         <Route path="/admin/chi-nhanh" element={<QuanLyChiNhanhPage />} />
@@ -118,6 +188,7 @@ export default function AppRoutes() {
         <Route path="/admin/vat-dung" element={<QuanLyVatDungPage />} />
       </Route>
 
+      {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { C, S } from '../../styles/tokens'
 
-// ============================================================
 // ICONS
-// ============================================================
 export function EyeIcon({ open }) {
   return open ? (
     <svg width="18" height="18" fill="none" viewBox="0 0 24 24"
@@ -59,9 +57,7 @@ export function CheckCircleIcon() {
   )
 }
 
-// ============================================================
 // INPUT FIELD
-// ============================================================
 export function InputField({
   label, type = 'text', placeholder,
   value, onChange, error,
@@ -110,9 +106,7 @@ export function InputField({
   )
 }
 
-// ============================================================
 // PASSWORD STRENGTH INDICATOR
-// ============================================================
 export function PasswordStrength({ password }) {
   const getStrength = (pw) => {
     if (!pw) return 0
@@ -153,9 +147,7 @@ export function PasswordStrength({ password }) {
   )
 }
 
-// ============================================================
 // RIGHT PANEL (ảnh + hero card)
-// ============================================================
 export function RightPanel({ badge = 'PREMIUM SERVICE', title, subtitle }) {
   return (
     <div style={S.rightPanel}>
@@ -175,9 +167,7 @@ export function RightPanel({ badge = 'PREMIUM SERVICE', title, subtitle }) {
   )
 }
 
-// ============================================================
 // TOP BAR
-// ============================================================
 export function TopBar() {
   return (
     <div style={S.topBar}>
@@ -186,9 +176,7 @@ export function TopBar() {
   )
 }
 
-// ============================================================
 // BOTTOM BAR
-// ============================================================
 export function BottomBar() {
   return (
     <div style={S.bottomBar}>
@@ -198,9 +186,7 @@ export function BottomBar() {
   )
 }
 
-// ============================================================
 // PRIMARY BUTTON
-// ============================================================
 export function PrimaryButton({ children, onClick, loading, type = 'submit', disabled }) {
   const [hover, setHover] = useState(false)
   const isDisabled = loading || disabled
@@ -223,9 +209,7 @@ export function PrimaryButton({ children, onClick, loading, type = 'submit', dis
   )
 }
 
-// ============================================================
 // BACK BUTTON
-// ============================================================
 export function BackButton({ children, onClick }) {
   const [hover, setHover] = useState(false)
   return (

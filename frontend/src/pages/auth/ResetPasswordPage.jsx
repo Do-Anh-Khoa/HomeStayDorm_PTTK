@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
 import { S, C } from '../../styles/tokens'
@@ -13,25 +13,48 @@ import {
   ShieldCheckIcon,
   CheckCircleIcon,
 } from '../../components/auth/AuthComponents'
+
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const token = searchParams.get('token') // lấy token từ URL
+  const token = searchParams.get('token')
 
-  const [form, setForm]     = useState({ password: '', confirm: '' })
-  const [showPw, setShowPw] = useState(false)
-  const [showCf, setShowCf] = useState(false)
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [done, setDone]     = useState(false)
+  const [form, setForm]         = useState({ password: '', confirm: '' })
+  const [showPw, setShowPw]     = useState(false)
+  const [showCf, setShowCf]     = useState(false)
+  const [errors, setErrors]     = useState({})
+  const [loading, setLoading]   = useState(false)
+  const [done, setDone]         = useState(false)
 
-  // ---- Validation ----
+  // null = đang kiểm tra | true = hợp lệ | false = hết hạn / không hợp lệ
+  const [tokenValid, setTokenValid] = useState(null)
+  const [tokenMsg, setTokenMsg]     = useState('')
+
+  //  Kiểm tra token ngay khi vào trang 
+  useEffect(() => {
+    if (!token) {
+      setTokenValid(false)
+      setTokenMsg('Link không hợp lệ.')
+      return
+    }
+
+    api.get(`/auth/verify-reset-token?token=${token}`)
+      .then(() => setTokenValid(true))
+      .catch((err) => {
+        setTokenValid(false)
+        setTokenMsg(
+          err.response?.data?.message || 'Link đã hết hạn hoặc không hợp lệ.'
+        )
+      })
+  }, [token])
+
+  //  Validation 
   const validate = () => {
     const e = {}
     if (!form.password)
       e.password = 'Vui lòng nhập mật khẩu mới.'
-    else if (form.password.length < 8)
-      e.password = 'Mật khẩu phải có ít nhất 8 ký tự.'
+    else if (form.password.length < 7)
+      e.password = 'Mật khẩu phải có ít nhất 7 ký tự.'
     if (!form.confirm)
       e.confirm = 'Vui lòng xác nhận mật khẩu.'
     else if (form.confirm !== form.password)
@@ -39,7 +62,7 @@ export default function ResetPasswordPage() {
     return e
   }
 
-  // ---- Submit ----
+  //  Submit 
   const handleSubmit = async (e) => {
     e.preventDefault()
     const e2 = validate()
@@ -55,27 +78,21 @@ export default function ResetPasswordPage() {
       setDone(true)
     } catch (err) {
       setErrors({
-        general: err.response?.data?.message || err.message || 'Link đã hết hạn hoặc không hợp lệ.',
+        general: err.response?.data?.message || 'Link đã hết hạn hoặc không hợp lệ.',
       })
     } finally {
       setLoading(false)
     }
   }
 
-  // ---- Token không có trong URL ----
-  if (!token) {
+  //  Đang kiểm tra token 
+  if (tokenValid === null) {
     return (
       <div style={S.page}>
         <div style={S.leftPanel}>
           <TopBar />
           <div style={S.formWrap}>
-            <h1 style={{ ...S.heading, color: C.errorRed }}>Link không hợp lệ</h1>
-            <p style={S.subheading}>
-              Link reset mật khẩu không đúng hoặc đã hết hạn.
-            </p>
-            <PrimaryButton type="button" onClick={() => navigate('/forgot-password')}>
-              Yêu cầu link mới
-            </PrimaryButton>
+            <p style={S.subheading}>Đang kiểm tra link...</p>
           </div>
           <BottomBar />
         </div>
@@ -87,6 +104,35 @@ export default function ResetPasswordPage() {
     )
   }
 
+  //  Token hết hạn hoặc không hợp lệ 
+  if (tokenValid === false) {
+    return (
+      <div style={S.page}>
+        <div style={S.leftPanel}>
+          <TopBar />
+          <div style={S.formWrap}>
+            <h1 style={{ ...S.heading, color: C.errorRed }}>Link không hợp lệ</h1>
+            <p style={{ ...S.subheading, marginBottom: '32px' }}>
+              {tokenMsg}
+            </p>
+            <PrimaryButton type="button" onClick={() => navigate('/forgot-password')}>
+              Yêu cầu link mới
+            </PrimaryButton>
+            <BackButton onClick={() => navigate('/login')}>
+              Quay lại Đăng nhập
+            </BackButton>
+          </div>
+          <BottomBar />
+        </div>
+        <RightPanel
+          title={'Hành trình mới\nBắt đầu từ đây.'}
+          subtitle="Trải nghiệm không gian sống hiện đại và tinh tế tại hệ thống ký túc xá homestay hàng đầu."
+        />
+      </div>
+    )
+  }
+
+  // Token hợp lệ → hiện form 
   return (
     <div style={S.page}>
       {/* LEFT */}
@@ -95,7 +141,6 @@ export default function ResetPasswordPage() {
 
         <div style={S.formWrap}>
 
-          {/* --- Chưa đổi xong --- */}
           {!done ? (
             <>
               <div style={{ marginBottom: '20px' }}>
@@ -103,8 +148,7 @@ export default function ResetPasswordPage() {
               </div>
               <h1 style={S.heading}>Đặt mật khẩu mới</h1>
               <p style={S.subheading}>
-                Nhập mật khẩu mới cho tài khoản của bạn. Mật khẩu phải có ít nhất
-                8 ký tự.
+                Nhập mật khẩu mới cho tài khoản của bạn. Mật khẩu phải có ít nhất 8 ký tự.
               </p>
 
               {errors.general && (
@@ -145,7 +189,6 @@ export default function ResetPasswordPage() {
               </form>
             </>
           ) : (
-            /* --- Đổi thành công --- */
             <>
               <div style={{ marginBottom: '24px' }}>
                 <CheckCircleIcon />
@@ -155,13 +198,9 @@ export default function ResetPasswordPage() {
                 Mật khẩu của bạn đã được cập nhật. Bạn có thể đăng nhập ngay bây giờ.
               </p>
               <div style={S.successBox}>
-                Để bảo mật tài khoản, hãy đảm bảo không chia sẻ mật khẩu
-                với bất kỳ ai.
+                Để bảo mật tài khoản, hãy đảm bảo không chia sẻ mật khẩu với bất kỳ ai.
               </div>
-              <PrimaryButton
-                type="button"
-                onClick={() => navigate('/login')}
-              >
+              <PrimaryButton type="button" onClick={() => navigate('/login')}>
                 Về trang Đăng nhập
               </PrimaryButton>
             </>
