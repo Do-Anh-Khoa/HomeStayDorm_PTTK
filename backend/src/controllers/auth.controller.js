@@ -1,12 +1,9 @@
-<<<<<<< HEAD
 
-=======
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import prisma from '../config/prisma.js'
 import { signToken } from '../utils/jwt.js'
 import { sendResetPasswordEmail } from '../utils/sendEmail.js'
->>>>>>> auth
 
 // Lưu token tạm thời trong bộ nhớ (sau này có thể chuyển vào DB nếu cần)
 // Key: token, Value: { email, expiresAt }
