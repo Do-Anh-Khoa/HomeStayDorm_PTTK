@@ -9,9 +9,7 @@ import { sendResetPasswordEmail } from '../utils/sendEmail.js'
 // Key: token, Value: { email, expiresAt }
 const resetTokenStore = new Map()
 
-// ============================================================
 // POST /api/auth/login
-// ============================================================
 export const login = async (req, res) => {
   try {
     const { username, password } = req.body
@@ -64,10 +62,8 @@ export const login = async (req, res) => {
   }
 }
 
-// ============================================================
 // POST /api/auth/forgot-password
 // Body: { email }
-// ============================================================
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body
@@ -108,10 +104,8 @@ export const forgotPassword = async (req, res) => {
   }
 }
 
-// ============================================================
 // POST /api/auth/reset-password
 // Body: { token, newPassword }
-// ============================================================
 export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body
@@ -120,8 +114,8 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Thiếu thông tin.' })
     }
 
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 8 ký tự.' })
+    if (newPassword.length < 7) {
+      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 7 ký tự.' })
     }
 
     // Kiểm tra token có tồn tại không
@@ -153,4 +147,24 @@ export const resetPassword = async (req, res) => {
     console.error('Reset password error:', error)
     return res.status(500).json({ message: 'Lỗi server. Vui lòng thử lại.' })
   }
+}
+export const verifyResetToken = (req, res) => {
+  const { token } = req.query
+
+  if (!token) {
+    return res.status(400).json({ valid: false, message: 'Thiếu token.' })
+  }
+
+  const record = resetTokenStore.get(token)
+
+  if (!record) {
+    return res.status(400).json({ valid: false, message: 'Link không hợp lệ hoặc đã được sử dụng.' })
+  }
+
+  if (Date.now() > record.expiresAt) {
+    resetTokenStore.delete(token)
+    return res.status(400).json({ valid: false, message: 'Link đã hết hạn. Vui lòng yêu cầu link mới.' })
+  }
+
+  return res.status(200).json({ valid: true })
 }
