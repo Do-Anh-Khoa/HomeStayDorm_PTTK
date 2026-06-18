@@ -9,12 +9,24 @@ import {
   PrimaryButton,
 } from '../../components/auth/AuthComponents'
 
-const demoAccounts = {
-  sale01: { password: 'demo123', role: 'sale', path: '/sale' },
-  quanly01: { password: 'demo123', role: 'quanly', path: '/quan-ly' },
-  ketoan01: { password: 'demo123', role: 'ketoan', path: '/ke-toan' },
-  phutrach01: { password: 'demo123', role: 'phutrach', path: '/phu-trach' },
-  admin01: { password: 'demo123', role: 'admin', path: '/admin' },
+// Backend trả loai_nv viết HOA (theo CHECK constraint trong DB).
+// Frontend (AppRoutes.jsx) quy ước key viết thường, tiếng Việt không dấu.
+// Bảng dịch này bắt buộc phải có, không thì role không khớp -> trang trống.
+const ROLE_KEY_MAP = {
+  ADMIN: 'admin',
+  SALE: 'sale',
+  QL: 'quanly',
+  KT: 'ketoan',
+  PT: 'phutrach',
+}
+
+// Phải khớp 100% với defaultPathByRole trong AppRoutes.jsx
+const ROLE_ROUTES = {
+  admin: '/admin',
+  sale: '/sale',
+  quanly: '/quan-ly',
+  ketoan: '/ke-toan',
+  phutrach: '/phu-trach',
 }
 
 export default function LoginPage({ setRole = () => {} }) {
@@ -43,33 +55,35 @@ export default function LoginPage({ setRole = () => {} }) {
     setLoading(true)
 
     try {
-      const username = form.username.trim().toLowerCase()
-      const account = demoAccounts[username]
+      const res = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: form.username, password: form.password }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
 
-      await new Promise(r => setTimeout(r, 350))
+      // Dịch loai_nv (SALE/QL/KT/PT/ADMIN) sang key mà AppRoutes đang dùng
+      const roleKey = ROLE_KEY_MAP[data.user.loai_nv] || ''
 
-      if (!account || account.password !== form.password) {
-        setErrors({ general: 'Tên đăng nhập hoặc mật khẩu không đúng.' })
-        return
-      }
-
+      // Lưu thông tin vào Storage của trình duyệt
       const storage = remember ? localStorage : sessionStorage
       const staleStorage = remember ? sessionStorage : localStorage
-      const user = { username, role: account.role }
 
       staleStorage.removeItem('token')
       staleStorage.removeItem('role')
       staleStorage.removeItem('user')
-      storage.setItem('token', `demo-token-${account.role}`)
-      storage.setItem('role', account.role)
-      storage.setItem('user', JSON.stringify(user))
 
-      setRole(account.role)
-      navigate(account.path, { replace: true })
+      storage.setItem('token', data.token)
+      storage.setItem('role', roleKey)
+      storage.setItem('user', JSON.stringify(data.user))
 
-      // TODO: thay demoAccounts bằng API thật khi backend auth sẵn sàng.
+      // Chuyển hướng sang đúng trang chức năng theo vai trò
+      setRole(roleKey)
+      navigate(ROLE_ROUTES[roleKey] || '/login', { replace: true })
+
     } catch (err) {
-      setErrors({ general: 'Tên đăng nhập hoặc mật khẩu không đúng.' })
+      setErrors({ general: err.message || 'Có lỗi xảy ra khi kết nối hệ thống.' })
     } finally {
       setLoading(false)
     }
@@ -93,7 +107,7 @@ export default function LoginPage({ setRole = () => {} }) {
 
           <form onSubmit={handleSubmit} noValidate>
             <InputField
-              label="Số điện thoại / Email / Tên đăng nhập"
+              label="Số điện thoại / Email"
               type="text"
               placeholder="Nhập tài khoản của bạn"
               value={form.username}

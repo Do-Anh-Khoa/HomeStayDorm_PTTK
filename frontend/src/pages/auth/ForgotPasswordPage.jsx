@@ -27,15 +27,18 @@ export default function ForgotPasswordPage() {
     setLoading(true)
 
     try {
-      // TODO: thay bằng API thật
-      // await axios.post('/api/auth/forgot-password', { email })
-
-      await new Promise(r => setTimeout(r, 1200)) // giả lập delay
-      setSent(true)
+      const res = await fetch('http://localhost:3000/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json()
+        if (!res.ok) { setError(data.message || 'Có lỗi xảy ra.'); return }
+        setSent(true)
     } catch (err) {
-      setError('Không tìm thấy email trong hệ thống.')
+        setError('Không thể kết nối server. Vui lòng thử lại.')
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
   }
 
