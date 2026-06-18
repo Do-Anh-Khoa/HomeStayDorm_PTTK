@@ -1,7 +1,10 @@
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
+import prisma from '../config/prisma.js'
+import { signToken } from '../utils/jwt.js'
 import { sendResetPasswordEmail } from '../utils/sendEmail.js'
-// Lưu token tạm thời trong bộ nhớ (sau này thay bằng database)
+
+// Lưu token tạm thời trong bộ nhớ (sau này có thể chuyển vào DB nếu cần)
 // Key: token, Value: { email, expiresAt }
 const resetTokenStore = new Map()
 
@@ -16,21 +19,44 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin.' })
     }
 
-    // TODO: thay bằng query database thật
-    // const user = await prisma.user.findFirst({
-    //   where: {
-    //     OR: [
-    //       { email: username },
-    //       { phone: username },
-    //       { username: username },
-    //     ]
-    //   }
-    // })
-    // if (!user) return res.status(401).json({ message: 'Tài khoản không tồn tại.' })
-    // const isMatch = await bcrypt.compare(password, user.password)
-    // if (!isMatch) return res.status(401).json({ message: 'Mật khẩu không đúng.' })
+    // Tìm nhân viên theo email hoặc số điện thoại
+    const nhanVien = await prisma.nhanvien.findFirst({
+      where: {
+        OR: [{ email: username }, { sdt: username }],
+      },
+    })
 
-    return res.status(200).json({ message: 'Đăng nhập thành công.' })
+    if (!nhanVien) {
+      return res.status(401).json({ message: 'Tài khoản không tồn tại.' })
+    }
+
+    if (nhanVien.tinh_trang !== 'Đang làm việc') {
+      return res.status(403).json({ message: 'Tài khoản đã nghỉ việc, không thể đăng nhập.' })
+    }
+
+    const isMatch = await bcrypt.compare(password, nhanVien.mat_khau)
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Mật khẩu không đúng.' })
+    }
+
+    // Tạo token chứa thông tin để phân quyền ở các API sau này
+    const token = signToken({
+      ma_nv: nhanVien.ma_nv,
+      loai_nv: nhanVien.loai_nv,
+      ma_cn: nhanVien.ma_cn,
+    })
+
+    return res.status(200).json({
+      message: 'Đăng nhập thành công.',
+      token,
+      user: {
+        ma_nv: nhanVien.ma_nv,
+        ten_nv: nhanVien.ten_nv,
+        loai_nv: nhanVien.loai_nv, // SALE | QL | KT | PT | ADMIN -> frontend dùng để điều hướng
+        ma_cn: nhanVien.ma_cn,
+        email: nhanVien.email,
+      },
+    })
   } catch (error) {
     console.error('Login error:', error)
     return res.status(500).json({ message: 'Lỗi server.' })
@@ -49,12 +75,13 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng nhập email.' })
     }
 
-    // TODO: sau khi có database, bỏ comment đoạn này
-    // const user = await prisma.user.findUnique({ where: { email } })
-    // if (!user) {
-    //   // Vẫn trả về 200 để không lộ email nào đã đăng ký
-    //   return res.status(200).json({ message: 'Nếu email tồn tại, chúng tôi đã gửi link khôi phục.' })
-    // }
+    const nhanVien = await prisma.nhanvien.findUnique({ where: { email } })
+    if (!nhanVien) {
+      // Vẫn trả 200 để không lộ email nào đã đăng ký trong hệ thống
+      return res.status(200).json({
+        message: 'Nếu email tồn tại, chúng tôi đã gửi link khôi phục.',
+      })
+    }
 
     // Tạo token ngẫu nhiên
     const token = crypto.randomBytes(32).toString('hex')
@@ -85,8 +112,6 @@ export const forgotPassword = async (req, res) => {
 // Body: { token, newPassword }
 // ============================================================
 export const resetPassword = async (req, res) => {
-  console.log('EMAIL_USER:', process.env.EMAIL_USER)
-  console.log('EMAIL_PASS:', process.env.EMAIL_PASS)
   try {
     const { token, newPassword } = req.body
 
@@ -110,17 +135,14 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Link đã hết hạn. Vui lòng yêu cầu link mới.' })
     }
 
-    // Hash mật khẩu mới
+    // Hash mật khẩu mới TRƯỚC KHI lưu xuống database
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
-    // TODO: sau khi có database, bỏ comment đoạn này
-    // await prisma.user.update({
-    //   where: { email: record.email },
-    //   data: { password: hashedPassword },
-    // })
-
-    console.log(`Đổi mật khẩu cho: ${record.email}`) // tạm thời log ra
-    console.log(`Mật khẩu mới (đã hash): ${hashedPassword}`)
+    // Lưu hash thật vào database (thay cho console.log tạm thời trước đây)
+    await prisma.nhanvien.update({
+      where: { email: record.email },
+      data: { mat_khau: hashedPassword },
+    })
 
     // Xóa token sau khi dùng xong
     resetTokenStore.delete(token)
