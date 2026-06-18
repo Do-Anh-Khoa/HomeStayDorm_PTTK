@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import api from '../../services/api'
 import { S, C } from '../../styles/tokens'
 import {
   InputField,
@@ -47,16 +48,15 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      // TODO: thay bằng API thật
-      // await axios.post('/api/auth/reset-password', {
-      //   token,
-      //   newPassword: form.password,
-      // })
-
-      await new Promise(r => setTimeout(r, 1200)) // giả lập delay
+      await api.post('/auth/reset-password', {
+        token,
+        newPassword: form.password,
+      })
       setDone(true)
     } catch (err) {
-      setErrors({ general: 'Link đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.' })
+      setErrors({
+        general: err.response?.data?.message || err.message || 'Link đã hết hạn hoặc không hợp lệ.',
+      })
     } finally {
       setLoading(false)
     }

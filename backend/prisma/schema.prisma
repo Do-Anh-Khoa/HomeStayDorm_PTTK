@@ -7,41 +7,372 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Schema demo tối giản. Nhóm sẽ bổ sung theo ERD chính thức.
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bien_ban_ban_giao {
+  ma_bb         String        @id @db.VarChar(20)
+  ngay_bg       DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  tinh_trang_vs String
+  nv_quan_ly    String        @db.VarChar(20)
+  ma_hdt        String        @db.VarChar(20)
+  hop_dong_thue hop_dong_thue @relation(fields: [ma_hdt], references: [ma_hdt], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien      nhanvien      @relation(fields: [nv_quan_ly], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  vd_bg         vd_bg[]
 
-model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String
-  fullName  String
-  role      String
-  createdAt DateTime @default(now())
+  @@index([ma_hdt], map: "idx_bien_ban_ban_giao_ma_hdt")
 }
 
-model Branch {
-  id        Int      @id @default(autoincrement())
-  name      String
-  address   String?
-  rooms     Room[]
-  createdAt DateTime @default(now())
+model boi_thuong {
+  ma_bt         String          @id @db.VarChar(20)
+  ngay_bt       DateTime        @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ma_kh         String          @db.VarChar(20)
+  nv_quan_ly    String          @db.VarChar(20)
+  khach_hang    khach_hang      @relation(fields: [ma_kh], references: [ma_kh], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien      nhanvien        @relation(fields: [nv_quan_ly], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  pt_boi_thuong pt_boi_thuong[]
 }
 
-model Room {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
-  roomType  String?
-  status    String   @default("TRONG")
-  branchId  Int?
-  branch    Branch?  @relation(fields: [branchId], references: [id])
-  beds      Bed[]
-  createdAt DateTime @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model chi_nhanh {
+  ma_cn                                            String          @id @db.VarChar(20)
+  ten_cn                                           String
+  dia_chi                                          String
+  sdt                                              String          @db.VarChar(15)
+  ho_so_dang_ky_ho_so_dang_ky_chi_nhanhTochi_nhanh ho_so_dang_ky[] @relation("ho_so_dang_ky_chi_nhanhTochi_nhanh")
+  nhanvien                                         nhanvien[]
+  phong_phong_chi_nhanhTochi_nhanh                 phong[]         @relation("phong_chi_nhanhTochi_nhanh")
 }
 
-model Bed {
-  id        Int      @id @default(autoincrement())
-  code      String
-  status    String   @default("TRONG")
-  roomId    Int
-  room      Room     @relation(fields: [roomId], references: [id])
-  createdAt DateTime @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model chi_tiet_dv {
+  ma_ct      String   @id @db.VarChar(20)
+  so_luong   Int
+  ngay       DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  thanh_tien Decimal  @db.Decimal(12, 2)
+  trang_thai String
+  ma_dv      String   @db.VarChar(20)
+  ma_phong   String   @db.VarChar(20)
+  dich_vu    dich_vu  @relation(fields: [ma_dv], references: [ma_dv], onDelete: NoAction, onUpdate: NoAction)
+  phong      phong    @relation(fields: [ma_phong], references: [ma_phong], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ma_dv], map: "idx_chi_tiet_dv_ma_dv")
+  @@index([ma_phong], map: "idx_chi_tiet_dv_ma_phong")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model dat_coc_giuong {
+  ma_pdc        String        @db.VarChar(20)
+  ma_phong      String        @db.VarChar(20)
+  ma_giuong     String        @db.VarChar(20)
+  trang_thai    String
+  phieu_dat_coc phieu_dat_coc @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: Cascade, onUpdate: NoAction)
+  giuong        giuong        @relation(fields: [ma_phong, ma_giuong], references: [ma_phong, ma_giuong], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([ma_pdc, ma_phong, ma_giuong])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model dich_vu {
+  ma_dv       String        @id @db.VarChar(20)
+  ten_dv      String
+  gia_dv      Decimal       @db.Decimal(12, 2)
+  don_vi_tinh String
+  chi_tiet_dv chi_tiet_dv[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model giuong {
+  ma_phong       String           @db.VarChar(20)
+  ma_giuong      String           @db.VarChar(20)
+  trang_thai     String
+  dat_coc_giuong dat_coc_giuong[]
+  phong          phong            @relation(fields: [ma_phong], references: [ma_phong], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([ma_phong, ma_giuong])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ho_so_dang_ky {
+  ma_dk                                           String               @id @db.VarChar(20)
+  ngay_lap                                        DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  hinh_thuc_thue                                  String
+  so_nguoi                                        Int
+  thoi_gian_vao                                   DateTime             @db.Date
+  thoi_han_thue                                   Int
+  tieu_chi                                        String?
+  trang_thai                                      String
+  chi_nhanh                                       String               @db.VarChar(20)
+  khach_hang                                      String               @db.VarChar(20)
+  chi_nhanh_ho_so_dang_ky_chi_nhanhTochi_nhanh    chi_nhanh            @relation("ho_so_dang_ky_chi_nhanhTochi_nhanh", fields: [chi_nhanh], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
+  khach_hang_ho_so_dang_ky_khach_hangTokhach_hang khach_hang           @relation("ho_so_dang_ky_khach_hangTokhach_hang", fields: [khach_hang], references: [ma_kh], onDelete: NoAction, onUpdate: NoAction)
+  lich_hen_xem_phong                              lich_hen_xem_phong[]
+
+  @@index([chi_nhanh], map: "idx_ho_so_dang_ky_chi_nhanh")
+  @@index([khach_hang], map: "idx_ho_so_dang_ky_khach_hang")
+}
+
+model ho_so_tra_phong {
+  ma_tp              String               @id @db.VarChar(20)
+  ngay_tp            DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  nv_sale            String               @db.VarChar(20)
+  ma_pdc             String               @db.VarChar(20)
+  ma_hdt             String               @db.VarChar(20)
+  ma_khach_thue      String               @db.VarChar(20)
+  khach_thue         khach_thue           @relation(fields: [ma_khach_thue, ma_hdt], references: [ma_kh, ma_hdt], onDelete: NoAction, onUpdate: NoAction)
+  phieu_dat_coc      phieu_dat_coc        @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien           nhanvien             @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  lich_hen_tra_phong lich_hen_tra_phong[]
+  pt_tra_phong       pt_tra_phong[]
+  vat_dung_hu_hai    vat_dung_hu_hai[]
+
+  @@index([ma_hdt], map: "idx_ho_so_tra_phong_ma_hdt")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model hop_dong_thue {
+  ma_hdt            String              @id @db.VarChar(20)
+  tg_tao_hd         DateTime            @default(now()) @db.Timestamp(6)
+  tg_vao            DateTime            @db.Date
+  thoi_han_thue     Int
+  ky_tt             Int
+  nv_phu_trach      String              @db.VarChar(20)
+  ma_pdc            String              @unique @db.VarChar(20)
+  bien_ban_ban_giao bien_ban_ban_giao[]
+  phieu_dat_coc     phieu_dat_coc       @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien          nhanvien            @relation(fields: [nv_phu_trach], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  khach_thue        khach_thue[]
+  pt_hop_dong       pt_hop_dong[]
+
+  @@index([ma_pdc], map: "idx_hop_dong_thue_ma_pdc")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model khach_hang {
+  ma_kh                                              String          @id @db.VarChar(20)
+  ten_kh                                             String
+  cccd                                               String          @unique @db.VarChar(20)
+  sdt                                                String          @db.VarChar(15)
+  email                                              String          @unique
+  gioi_tinh                                          String
+  cong_viec                                          String?
+  quoc_tich                                          String          @default("Việt Nam")
+  boi_thuong                                         boi_thuong[]
+  ho_so_dang_ky_ho_so_dang_ky_khach_hangTokhach_hang ho_so_dang_ky[] @relation("ho_so_dang_ky_khach_hangTokhach_hang")
+  khach_thue                                         khach_thue[]
+  phieu_dat_coc                                      phieu_dat_coc[]
+}
+
+model khach_thue {
+  ma_kh           String            @db.VarChar(20)
+  ma_hdt          String            @db.VarChar(20)
+  ho_so_tra_phong ho_so_tra_phong[]
+  hop_dong_thue   hop_dong_thue     @relation(fields: [ma_hdt], references: [ma_hdt], onDelete: Cascade, onUpdate: NoAction)
+  khach_hang      khach_hang        @relation(fields: [ma_kh], references: [ma_kh], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([ma_kh, ma_hdt])
+}
+
+model lich_hen_tra_phong {
+  ma_lich         String          @id @db.VarChar(20)
+  tg_hen          DateTime        @db.Timestamp(6)
+  ma_tp           String          @db.VarChar(20)
+  nv_sale         String          @db.VarChar(20)
+  ho_so_tra_phong ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: Cascade, onUpdate: NoAction)
+  nhanvien        nhanvien        @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model lich_hen_xem_phong {
+  ma_lich       String        @id @db.VarChar(20)
+  tg_hen        DateTime      @db.Timestamp(6)
+  ma_dk         String        @db.VarChar(20)
+  nv_sale       String        @db.VarChar(20)
+  ho_so_dang_ky ho_so_dang_ky @relation(fields: [ma_dk], references: [ma_dk], onDelete: Cascade, onUpdate: NoAction)
+  nhanvien      nhanvien      @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model loai_phong {
+  ma_loai            String  @id @db.VarChar(20)
+  ten_loai           String
+  gia_nguyen_phong   Decimal @db.Decimal(12, 2)
+  gia_giuong         Decimal @db.Decimal(12, 2)
+  thoi_han_toi_da    Int
+  thoi_han_toi_thieu Int
+  phong              phong[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model nhanvien {
+  ma_nv              String               @id @db.VarChar(20)
+  ten_nv             String
+  mat_khau           String
+  cccd               String               @unique @db.VarChar(20)
+  sdt                String               @db.VarChar(15)
+  gioi_tinh          String
+  ngay_sinh          DateTime             @db.Date
+  luong              Decimal              @db.Decimal(12, 2)
+  loai_nv            String
+  email              String               @unique
+  tinh_trang         String
+  ma_cn              String               @db.VarChar(20)
+  bien_ban_ban_giao  bien_ban_ban_giao[]
+  boi_thuong         boi_thuong[]
+  ho_so_tra_phong    ho_so_tra_phong[]
+  hop_dong_thue      hop_dong_thue[]
+  lich_hen_tra_phong lich_hen_tra_phong[]
+  lich_hen_xem_phong lich_hen_xem_phong[]
+  chi_nhanh          chi_nhanh            @relation(fields: [ma_cn], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
+  phieu_dat_coc      phieu_dat_coc[]
+  pt_boi_thuong      pt_boi_thuong[]
+  pt_dat_coc         pt_dat_coc[]
+  pt_hop_dong        pt_hop_dong[]
+  pt_tra_phong       pt_tra_phong[]
+
+  @@index([ma_cn], map: "idx_nhanvien_ma_cn")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model phieu_dat_coc {
+  ma_pdc          String            @id @db.VarChar(20)
+  ngay_dc         DateTime          @default(dbgenerated("CURRENT_DATE")) @db.Date
+  trang_thai      String
+  khach_dat       String            @db.VarChar(20)
+  nv_sale         String            @db.VarChar(20)
+  dat_coc_giuong  dat_coc_giuong[]
+  ho_so_tra_phong ho_so_tra_phong[]
+  hop_dong_thue   hop_dong_thue?
+  khach_hang      khach_hang        @relation(fields: [khach_dat], references: [ma_kh], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien        nhanvien          @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  pt_dat_coc      pt_dat_coc[]
+
+  @@index([khach_dat], map: "idx_phieu_dat_coc_khach_dat")
+  @@index([nv_sale], map: "idx_phieu_dat_coc_nv_sale")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model phong {
+  ma_phong                             String        @id @db.VarChar(20)
+  suc_chua_toi_da                      Int
+  ma_loai                              String        @db.VarChar(20)
+  chi_nhanh                            String        @db.VarChar(20)
+  chi_tiet_dv                          chi_tiet_dv[]
+  giuong                               giuong[]
+  chi_nhanh_phong_chi_nhanhTochi_nhanh chi_nhanh     @relation("phong_chi_nhanhTochi_nhanh", fields: [chi_nhanh], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
+  loai_phong                           loai_phong    @relation(fields: [ma_loai], references: [ma_loai], onDelete: NoAction, onUpdate: NoAction)
+  tieu_chi                             tieu_chi[]
+
+  @@index([chi_nhanh], map: "idx_phong_chi_nhanh")
+  @@index([ma_loai], map: "idx_phong_ma_loai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pt_boi_thuong {
+  ma_ptdb    String     @id @db.VarChar(20)
+  ngay       DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ghi_chu    String?
+  trang_thai String
+  tong_tien  Decimal    @db.Decimal(12, 2)
+  nv_ke_toan String     @db.VarChar(20)
+  ma_bt      String     @db.VarChar(20)
+  boi_thuong boi_thuong @relation(fields: [ma_bt], references: [ma_bt], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien   nhanvien   @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pt_dat_coc {
+  ma_ptdc       String        @id @db.VarChar(20)
+  ngay          DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ghi_chu       String?
+  trang_thai    String
+  tong_tien     Decimal       @db.Decimal(12, 2)
+  nv_ke_toan    String        @db.VarChar(20)
+  ma_pdc        String        @db.VarChar(20)
+  phieu_dat_coc phieu_dat_coc @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien      nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ma_pdc], map: "idx_pt_dat_coc_ma_pdc")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pt_hop_dong {
+  ma_pthd       String        @id @db.VarChar(20)
+  ngay          DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ghi_chu       String?
+  trang_thai    String
+  tong_tien     Decimal       @db.Decimal(12, 2)
+  nv_ke_toan    String        @db.VarChar(20)
+  ma_hdt        String        @db.VarChar(20)
+  hop_dong_thue hop_dong_thue @relation(fields: [ma_hdt], references: [ma_hdt], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien      nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ma_hdt], map: "idx_pt_hop_dong_ma_hdt")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pt_tra_phong {
+  ma_pttp         String          @id @db.VarChar(20)
+  ngay            DateTime        @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ghi_chu         String?
+  trang_thai      String
+  tong_tien       Decimal         @db.Decimal(12, 2)
+  tien_hoan_coc   Decimal         @db.Decimal(12, 2)
+  tien_khau_tru   Decimal         @db.Decimal(12, 2)
+  nv_ke_toan      String          @db.VarChar(20)
+  ma_tp           String          @db.VarChar(20)
+  ho_so_tra_phong ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien        nhanvien        @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model quy_dinh_hoan_coc {
+  ma_qdhc  String @id @db.VarChar(20)
+  ten_qd   String
+  noi_dung String
+}
+
+model quy_dinh_ktx {
+  ma_qdktx String @id @db.VarChar(20)
+  ten_qd   String
+  noi_dung String
+}
+
+model tieu_chi {
+  ma_phong String  @db.VarChar(20)
+  ma_tc    String  @db.VarChar(20)
+  ten_tc   String
+  mo_ta    String?
+  phong    phong   @relation(fields: [ma_phong], references: [ma_phong], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([ma_phong, ma_tc])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vat_dung {
+  ma_vd          String  @id @db.VarChar(20)
+  ten_vd         String
+  gia_boi_thuong Decimal @db.Decimal(12, 2)
+  vd_bg          vd_bg[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vat_dung_hu_hai {
+  ma_tp           String          @db.VarChar(20)
+  ma_vd           String          @db.VarChar(20)
+  ma_bb           String          @db.VarChar(20)
+  sl_hu_hai       Int
+  ho_so_tra_phong ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: Cascade, onUpdate: NoAction)
+  vd_bg           vd_bg           @relation(fields: [ma_vd, ma_bb], references: [ma_vd, ma_bb], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([ma_tp, ma_vd, ma_bb])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vd_bg {
+  ma_vd             String            @db.VarChar(20)
+  ma_bb             String            @db.VarChar(20)
+  so_luong          Int
+  tinh_trang        String
+  vat_dung_hu_hai   vat_dung_hu_hai[]
+  bien_ban_ban_giao bien_ban_ban_giao @relation(fields: [ma_bb], references: [ma_bb], onDelete: Cascade, onUpdate: NoAction)
+  vat_dung          vat_dung          @relation(fields: [ma_vd], references: [ma_vd], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([ma_vd, ma_bb])
 }

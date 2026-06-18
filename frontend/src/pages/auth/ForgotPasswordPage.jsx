@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../../services/api'
 import { S } from '../../styles/tokens'
 import {
   InputField,
@@ -27,13 +28,10 @@ export default function ForgotPasswordPage() {
     setLoading(true)
 
     try {
-      // TODO: thay bằng API thật
-      // await axios.post('/api/auth/forgot-password', { email })
-
-      await new Promise(r => setTimeout(r, 1200)) // giả lập delay
+      await api.post('/auth/forgot-password', { email })
       setSent(true)
     } catch (err) {
-      setError('Không tìm thấy email trong hệ thống.')
+      setError(err.response?.data?.message || 'Không thể kết nối server. Vui lòng thử lại.')
     } finally {
       setLoading(false)
     }
