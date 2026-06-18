@@ -11,14 +11,15 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/client": "latest",
+    "@prisma/client": "^6.19.3",
     "bcryptjs": "latest",
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
-    "jsonwebtoken": "latest"
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.0.0"
   },
   "devDependencies": {
-    "prisma": "latest"
+    "prisma": "^6.19.3"
   }
 }
