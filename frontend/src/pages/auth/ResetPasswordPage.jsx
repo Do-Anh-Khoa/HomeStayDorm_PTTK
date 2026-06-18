@@ -47,16 +47,16 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      // TODO: thay bằng API thật
-      // await axios.post('/api/auth/reset-password', {
-      //   token,
-      //   newPassword: form.password,
-      // })
-
-      await new Promise(r => setTimeout(r, 1200)) // giả lập delay
-      setDone(true)
+    const res = await fetch('http://localhost:3000/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: form.password }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+    setDone(true)
     } catch (err) {
-      setErrors({ general: 'Link đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.' })
+    setErrors({ general: err.message || 'Link đã hết hạn hoặc không hợp lệ.' })
     } finally {
       setLoading(false)
     }

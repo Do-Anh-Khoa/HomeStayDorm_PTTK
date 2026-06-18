@@ -35,22 +35,20 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-        if (remember) {
-            localStorage.setItem('token', res.data.token)
-        } else {
-            sessionStorage.setItem('token', res.data.token)
-        }
-      // TODO: thay bằng API thật
-      // const res = await axios.post('/api/auth/login', {
-      //   username: form.username,
-      //   password: form.password,
-      // })
-      // navigate('/dashboard')
+      const res = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: form.username, password: form.password }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
 
-      await new Promise(r => setTimeout(r, 1200)) // giả lập delay
-      alert('Đăng nhập thành công! (chưa kết nối API)')
+      if (remember) localStorage.setItem('token', data.token)
+      else sessionStorage.setItem('token', data.token)
+
+      navigate('/dashboard')
     } catch (err) {
-      setErrors({ general: 'Tên đăng nhập hoặc mật khẩu không đúng.' })
+      setErrors({ general: err.message || 'Tên đăng nhập hoặc mật khẩu không đúng.' })
     } finally {
       setLoading(false)
     }
@@ -74,7 +72,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} noValidate>
             <InputField
-              label="Số điện thoại / Email / Tên đăng nhập"
+              label="Số điện thoại / Email"
               type="text"
               placeholder="Nhập tài khoản của bạn"
               value={form.username}
