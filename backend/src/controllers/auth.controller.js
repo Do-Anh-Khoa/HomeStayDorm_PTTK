@@ -106,6 +106,7 @@ export const forgotPassword = async (req, res) => {
 
     const nhanVien = await prisma.nhanvien.findUnique({ where: { email } })
     if (!nhanVien) {
+      console.log('Phát hiện lỗi: Không tìm thấy email này trong Database:', email);
       // Vẫn trả 200 để không lộ email nào đã đăng ký trong hệ thống
       return res.status(200).json({
         message: 'Nếu email tồn tại, chúng tôi đã gửi link khôi phục.',
