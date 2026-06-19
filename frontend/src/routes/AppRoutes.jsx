@@ -11,6 +11,7 @@ import DashboardSale from '../pages/sale/DashboardSale.jsx'
 import HoSoDangKyPage from '../pages/sale/HoSoDangKyPage.jsx'
 import TraCuuPhongGiuongPage from '../pages/sale/TraCuuPhongGiuongPage.jsx'
 import LichXemPhongPage from '../pages/sale/LichXemPhongPage.jsx'
+import PhieuThuSalePage from '../pages/sale/PhieuThuPage.jsx'
 import PhieuDatCocPage from '../pages/sale/PhieuDatCocPage.jsx'
 
 import DashboardQuanLy from '../pages/quanly/DashboardQuanLy.jsx'
@@ -120,6 +121,7 @@ export default function AppRoutes() {
         <Route path="/sale/ho-so-dang-ky" element={<HoSoDangKyPage />} />
         <Route path="/sale/tra-cuu-phong-giuong" element={<TraCuuPhongGiuongPage />} />
         <Route path="/sale/lich-xem-phong" element={<LichXemPhongPage />} />
+        <Route path="/sale/phieu-thu" element={<PhieuThuSalePage />} />
         <Route path="/sale/phieu-dat-coc" element={<PhieuDatCocPage />} />
         <Route path="/sale/tra-phong" element={<TraPhongPage />} />
       </Route>
