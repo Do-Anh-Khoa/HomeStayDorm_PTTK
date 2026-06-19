@@ -226,8 +226,22 @@ model nhanvien {
   pt_dat_coc         pt_dat_coc[]
   pt_hop_dong        pt_hop_dong[]
   pt_tra_phong       pt_tra_phong[]
+  phien_dang_nhap    phien_dang_nhap[]
 
   @@index([ma_cn], map: "idx_nhanvien_ma_cn")
+}
+
+model phien_dang_nhap {
+  ma_phien    String    @id @default(uuid()) @db.Uuid
+  jti         String    @unique @db.Uuid
+  ma_nv       String    @db.VarChar(20)
+  tao_luc     DateTime  @default(now()) @db.Timestamp(6)
+  het_han     DateTime  @db.Timestamp(6)
+  thu_hoi_luc DateTime? @db.Timestamp(6)
+  nhanvien    nhanvien  @relation(fields: [ma_nv], references: [ma_nv], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ma_nv], map: "idx_phien_dang_nhap_ma_nv")
+  @@index([het_han], map: "idx_phien_dang_nhap_het_han")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

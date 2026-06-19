@@ -2,12 +2,13 @@
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import prisma from '../config/prisma.js'
-import { signToken } from '../utils/jwt.js'
+import { signToken, verifyToken } from '../utils/jwt.js'
 import { sendResetPasswordEmail } from '../utils/sendEmail.js'
 
 // Lưu token tạm thời trong bộ nhớ (sau này có thể chuyển vào DB nếu cần)
 // Key: token, Value: { email, expiresAt }
 const resetTokenStore = new Map()
+const DUMMY_PASSWORD_HASH = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
 
 // POST /api/auth/login
 export const login = async (req, res) => {
@@ -25,24 +26,35 @@ export const login = async (req, res) => {
       },
     })
 
-    if (!nhanVien) {
-      return res.status(401).json({ message: 'Tài khoản không tồn tại.' })
+    const passwordHash = nhanVien?.mat_khau || DUMMY_PASSWORD_HASH
+    const isMatch = await bcrypt.compare(password, passwordHash)
+
+    if (!nhanVien || !isMatch) {
+      return res.status(401).json({ message: 'Sai tên đăng nhập/mật khẩu.' })
     }
 
     if (nhanVien.tinh_trang !== 'Đang làm việc') {
-      return res.status(403).json({ message: 'Tài khoản đã nghỉ việc, không thể đăng nhập.' })
-    }
-
-    const isMatch = await bcrypt.compare(password, nhanVien.mat_khau)
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Mật khẩu không đúng.' })
+      return res.status(403).json({ message: 'Tài khoản không thể đăng nhập.' })
     }
 
     // Tạo token chứa thông tin để phân quyền ở các API sau này
-    const token = signToken({
-      ma_nv: nhanVien.ma_nv,
-      loai_nv: nhanVien.loai_nv,
-      ma_cn: nhanVien.ma_cn,
+    const jti = crypto.randomUUID()
+    const token = signToken(
+      {
+        ma_nv: nhanVien.ma_nv,
+        loai_nv: nhanVien.loai_nv,
+        ma_cn: nhanVien.ma_cn,
+      },
+      { jwtid: jti },
+    )
+    const tokenPayload = verifyToken(token)
+
+    await prisma.phien_dang_nhap.create({
+      data: {
+        jti,
+        ma_nv: nhanVien.ma_nv,
+        het_han: new Date(tokenPayload.exp * 1000),
+      },
     })
 
     return res.status(200).json({
@@ -59,6 +71,26 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error)
     return res.status(500).json({ message: 'Lỗi server.' })
+  }
+}
+
+// POST /api/auth/logout
+export const logout = async (req, res) => {
+  try {
+    await prisma.phien_dang_nhap.updateMany({
+      where: {
+        jti: req.auth.jti,
+        thu_hoi_luc: null,
+      },
+      data: {
+        thu_hoi_luc: new Date(),
+      },
+    })
+
+    return res.status(200).json({ message: 'Đăng xuất thành công.' })
+  } catch (error) {
+    console.error('Logout error:', error)
+    return res.status(500).json({ message: 'Không thể đăng xuất lúc này.' })
   }
 }
 
