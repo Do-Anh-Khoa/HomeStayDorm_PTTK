@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   FileText,
+  FilePlus2,
   Search,
   CalendarDays,
   Receipt,
@@ -21,9 +22,11 @@ import {
 export const menuByRole = {
   sale: [
     { label: 'Trang chủ', path: '/sale', icon: LayoutDashboard },
+    { label: 'Tra cứu', path: '/sale/tra-cuu-phong-giuong', icon: Search },
     { label: 'Hồ sơ', path: '/sale/ho-so-dang-ky', icon: FileText },
     { label: 'Lịch hẹn', path: '/sale/lich-xem-phong', icon: CalendarDays },
-    { label: 'Phiếu thu', path: '/sale/phieu-dat-coc', icon: Receipt },
+    { label: 'Phiếu thu', path: '/sale/phieu-thu', icon: Receipt },
+    { label: 'Lập phiếu đặt cọc', path: '/sale/phieu-dat-coc', icon: FilePlus2 },
     { label: 'Trả phòng', path: '/sale/tra-phong', icon: LogIn },
   ],
   quanly: [
