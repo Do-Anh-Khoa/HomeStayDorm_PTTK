@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import authRoutes from './routes/auth.routes.js'
+import apiRoutes from './routes/index.js'
 import { errorHandler } from './middlewares/errorHandler.js'
 
 dotenv.config()
@@ -16,11 +16,13 @@ app.use(cors({
 app.use(express.json())
 
 // ---- Routes ----
-app.use('/api/auth', authRoutes)
+app.use('/api', apiRoutes)
 
 // ---- Health check ----
 app.get('/', (req, res) => {
   res.json({ message: 'Homestay Dorm API đang chạy' })
 })
+
+app.use(errorHandler)
 
 export default app

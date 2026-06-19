@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { menuByRole } from '../../data/menuByRole.js'
 
-export default function Sidebar({ role, onLogout }) {
+export default function Sidebar({ role, onLogout, isLoggingOut = false }) {
   const menus = menuByRole[role] || []
 
   return (
@@ -53,11 +53,15 @@ export default function Sidebar({ role, onLogout }) {
       <div className="px-0 pb-9">
         <div className="mx-3 mb-4 border-t border-[#d6d7c9]" />
         <button
+          type="button"
           onClick={onLogout}
-          className="box-border flex h-[48px] w-full items-center gap-3 border-r-4 border-transparent px-6 text-[16px] font-medium text-[#53584f] transition hover:bg-[#f3f6e7] hover:text-[#24351b]"
+          disabled={isLoggingOut}
+          aria-label="Đăng xuất khỏi hệ thống"
+          aria-busy={isLoggingOut}
+          className="box-border flex h-[48px] w-full items-center gap-3 border-r-4 border-transparent px-6 text-[16px] font-medium text-[#53584f] transition hover:bg-[#f3f6e7] hover:text-[#24351b] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <LogOut size={21} strokeWidth={2} />
-          Đăng xuất
+          {isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
         </button>
       </div>
     </aside>

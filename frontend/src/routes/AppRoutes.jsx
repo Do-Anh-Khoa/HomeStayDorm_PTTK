@@ -1,6 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import MainLayout from '../components/layout/MainLayout.jsx'
+import {
+  clearAuthSession,
+  getStoredRole,
+  getStoredToken,
+  getTokenExpiryMs,
+  isTokenExpired,
+} from '../services/authSession.js'
 
 import LoginPage from '../pages/auth/LoginPage.jsx'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage.jsx'
@@ -60,10 +67,6 @@ export const loaiNvToRole = {
   ADMIN: 'admin',
 }
 
-function getStoredRole() {
-  return localStorage.getItem('role') || sessionStorage.getItem('role') || ''
-}
-
 // ProtectedRoute: chặn user vào route không thuộc role của họ
 function ProtectedRoute({ allowedRole, currentRole, children }) {
   // Chưa đăng nhập
@@ -84,15 +87,33 @@ export default function AppRoutes() {
 
   const setRole = (nextRole) => {
     if (!nextRole) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('role')
-      localStorage.removeItem('user')
-      sessionStorage.removeItem('token')
-      sessionStorage.removeItem('role')
-      sessionStorage.removeItem('user')
+      clearAuthSession()
     }
     setRoleState(nextRole)
   }
+
+  useEffect(() => {
+    if (!role) {
+      return undefined
+    }
+
+    const token = getStoredToken()
+    if (!token || isTokenExpired(token)) {
+      setRole('')
+      return undefined
+    }
+
+    const expiresAt = getTokenExpiryMs(token)
+    if (!expiresAt) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setRole('')
+    }, Math.max(expiresAt - Date.now(), 0))
+
+    return () => window.clearTimeout(timeoutId)
+  }, [role])
 
   const homePath = defaultPathByRole[role] || '/login'
 

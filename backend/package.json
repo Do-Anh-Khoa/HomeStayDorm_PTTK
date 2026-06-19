@@ -8,7 +8,8 @@
     "start": "prisma generate && node src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "verify:logout": "node scripts/verifyLogout.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
