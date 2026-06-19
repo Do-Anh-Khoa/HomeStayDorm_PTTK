@@ -35,7 +35,6 @@ export default function LoginPage({ setRole = () => {} }) {
 
   const [form, setForm] = useState({ username: '', password: '' })
   const [showPw, setShowPw] = useState(false)
-  const [remember, setRemember] = useState(false)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
@@ -64,17 +63,9 @@ export default function LoginPage({ setRole = () => {} }) {
       // Dịch loai_nv (SALE/QL/KT/PT/ADMIN) sang key mà AppRoutes đang dùng
       const roleKey = ROLE_KEY_MAP[data.user.loai_nv] || ''
 
-      // Lưu thông tin vào Storage của trình duyệt
-      const storage = remember ? localStorage : sessionStorage
-      const staleStorage = remember ? sessionStorage : localStorage
-
-      staleStorage.removeItem('token')
-      staleStorage.removeItem('role')
-      staleStorage.removeItem('user')
-
-      storage.setItem('token', data.token)
-      storage.setItem('role', roleKey)
-      storage.setItem('user', JSON.stringify(data.user))
+      sessionStorage.setItem('token', data.token)
+      sessionStorage.setItem('role', roleKey)
+      sessionStorage.setItem('user', JSON.stringify(data.user))
 
       // Chuyển hướng sang đúng trang chức năng theo vai trò
       setRole(roleKey)
@@ -130,16 +121,8 @@ export default function LoginPage({ setRole = () => {} }) {
               onToggle={() => setShowPw(!showPw)}
             />
 
-            <div style={S.rowBetween}>
-              <label style={S.checkLabel}>
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={e => setRemember(e.target.checked)}
-                  style={S.checkbox}
-                />
-                Ghi nhớ tài khoản
-              </label>
+            <div style={{ ...S.rowBetween, marginBottom: '28px' }}>
+              <span />
               <button
                 type="button"
                 style={S.linkBtn}
