@@ -1,6 +1,5 @@
-// ============================================================
+import monsteraImg from '../assets/monstera.jpg'
 // DESIGN TOKENS
-// ============================================================
 export const C = {
   forestDark:    '#2d3a1e',
   forest:        '#3b4f27',
@@ -18,9 +17,7 @@ export const C = {
   successGreen:  '#2e7d32',
 }
 
-// ============================================================
 // SHARED STYLES
-// ============================================================
 export const S = {
   page: {
     display: 'flex',
@@ -38,8 +35,7 @@ export const S = {
     flex: '0 0 48%',
     position: 'relative',
     overflow: 'hidden',
-    backgroundImage:
-      "url('https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=900&q=80')",
+    backgroundImage: `url(${monsteraImg})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   },
