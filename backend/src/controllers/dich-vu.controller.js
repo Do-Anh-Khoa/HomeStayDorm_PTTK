@@ -1,21 +1,5 @@
 import prisma from '../config/prisma.js'
 
-// sinh mã tự động: DV001, DV002, ...
-async function generateMaDv() {
-  const last = await prisma.dich_vu.findFirst({
-    orderBy: { ma_dv: 'desc' },
-    select:  { ma_dv: true },
-  })
-
-  if (!last) return 'DV001'
-
-  const num = parseInt(last.ma_dv.replace(/\D/g, ''), 10)
-  if (isNaN(num)) return 'DV001'
-
-  const next = num + 1
-  return 'DV' + String(next).padStart(3, '0')
-}
-
 // GET /api/dich-vu?q=keyword
 export async function getDichVuList(req, res) {
   const { q } = req.query
@@ -52,16 +36,14 @@ export async function createDichVu(req, res) {
   }
 
   try {
-    const ma_dv = await generateMaDv()
-
     const created = await prisma.dich_vu.create({
       data: {
-        ma_dv,
         ten_dv:      ten_dv.trim(),
         don_vi_tinh: don_vi_tinh?.trim() || '',
         gia_dv:      Number(gia_dv),
       },
     })
+
     res.status(201).json(created)
   } catch {
     res.status(500).json({ message: 'Lỗi khi thêm dịch vụ.' })

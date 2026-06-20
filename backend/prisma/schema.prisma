@@ -9,7 +9,7 @@ datasource db {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model bien_ban_ban_giao {
-  ma_bb         String        @id @db.VarChar(20)
+  ma_bb         String        @id @default(dbgenerated("('BB'::text || lpad((nextval('bien_ban_ban_giao_ma_bb_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay_bg       DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
   tinh_trang_vs String
   nv_quan_ly    String        @db.VarChar(20)
@@ -22,7 +22,7 @@ model bien_ban_ban_giao {
 }
 
 model boi_thuong {
-  ma_bt         String          @id @db.VarChar(20)
+  ma_bt         String          @id @default(dbgenerated("('BT'::text || lpad((nextval('boi_thuong_ma_bt_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay_bt       DateTime        @default(dbgenerated("CURRENT_DATE")) @db.Date
   ma_kh         String          @db.VarChar(20)
   nv_quan_ly    String          @db.VarChar(20)
@@ -33,7 +33,7 @@ model boi_thuong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model chi_nhanh {
-  ma_cn                                            String          @id @db.VarChar(20)
+  ma_cn                                            String          @id @default(dbgenerated("('CN'::text || lpad((nextval('chi_nhanh_ma_cn_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ten_cn                                           String
   dia_chi                                          String
   sdt                                              String          @db.VarChar(15)
@@ -44,7 +44,7 @@ model chi_nhanh {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model chi_tiet_dv {
-  ma_ct      String   @id @db.VarChar(20)
+  ma_ct      Int      @id @default(autoincrement())
   so_luong   Int
   ngay       DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
   thanh_tien Decimal  @db.Decimal(12, 2)
@@ -72,7 +72,7 @@ model dat_coc_giuong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model dich_vu {
-  ma_dv       String        @id @db.VarChar(20)
+  ma_dv       String        @id @default(dbgenerated("('DV'::text || lpad((nextval('dich_vu_ma_dv_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ten_dv      String
   gia_dv      Decimal       @db.Decimal(12, 2)
   don_vi_tinh String
@@ -92,7 +92,7 @@ model giuong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model ho_so_dang_ky {
-  ma_dk                                           String               @id @db.VarChar(20)
+  ma_dk                                           String               @id @default(dbgenerated("('HSDK'::text || lpad((nextval('ho_so_dang_ky_ma_dk_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay_lap                                        DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
   hinh_thuc_thue                                  String
   so_nguoi                                        Int
@@ -111,7 +111,7 @@ model ho_so_dang_ky {
 }
 
 model ho_so_tra_phong {
-  ma_tp              String               @id @db.VarChar(20)
+  ma_tp              String               @id @default(dbgenerated("('HSTP'::text || lpad((nextval('ho_so_tra_phong_ma_tp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay_tp            DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
   nv_sale            String               @db.VarChar(20)
   ma_pdc             String               @db.VarChar(20)
@@ -129,7 +129,7 @@ model ho_so_tra_phong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model hop_dong_thue {
-  ma_hdt            String              @id @db.VarChar(20)
+  ma_hdt            String              @id @default(dbgenerated("('HDT'::text || lpad((nextval('hop_dong_thue_ma_hdt_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   tg_tao_hd         DateTime            @default(now()) @db.Timestamp(6)
   tg_vao            DateTime            @db.Date
   thoi_han_thue     Int
@@ -147,7 +147,7 @@ model hop_dong_thue {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model khach_hang {
-  ma_kh                                              String          @id @db.VarChar(20)
+  ma_kh                                              String          @id @default(dbgenerated("('KH'::text || lpad((nextval('khach_hang_ma_kh_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ten_kh                                             String
   cccd                                               String          @unique @db.VarChar(20)
   sdt                                                String          @db.VarChar(15)
@@ -172,7 +172,7 @@ model khach_thue {
 }
 
 model lich_hen_tra_phong {
-  ma_lich         String          @id @db.VarChar(20)
+  ma_lich         Int             @id @default(autoincrement())
   tg_hen          DateTime        @db.Timestamp(6)
   ma_tp           String          @db.VarChar(20)
   nv_sale         String          @db.VarChar(20)
@@ -181,7 +181,7 @@ model lich_hen_tra_phong {
 }
 
 model lich_hen_xem_phong {
-  ma_lich       String        @id @db.VarChar(20)
+  ma_lich       Int           @id @default(autoincrement())
   tg_hen        DateTime      @db.Timestamp(6)
   ma_dk         String        @db.VarChar(20)
   nv_sale       String        @db.VarChar(20)
@@ -226,7 +226,6 @@ model nhanvien {
   pt_dat_coc         pt_dat_coc[]
   pt_hop_dong        pt_hop_dong[]
   pt_tra_phong       pt_tra_phong[]
-  phien_dang_nhap    phien_dang_nhap[]
 
   @@index([ma_cn], map: "idx_nhanvien_ma_cn")
 }
@@ -238,7 +237,6 @@ model phien_dang_nhap {
   tao_luc     DateTime  @default(now()) @db.Timestamp(6)
   het_han     DateTime  @db.Timestamp(6)
   thu_hoi_luc DateTime? @db.Timestamp(6)
-  nhanvien    nhanvien  @relation(fields: [ma_nv], references: [ma_nv], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([ma_nv], map: "idx_phien_dang_nhap_ma_nv")
   @@index([het_han], map: "idx_phien_dang_nhap_het_han")
@@ -246,7 +244,7 @@ model phien_dang_nhap {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model phieu_dat_coc {
-  ma_pdc          String            @id @db.VarChar(20)
+  ma_pdc          String            @id @default(dbgenerated("('PDC'::text || lpad((nextval('phieu_dat_coc_ma_pdc_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay_dc         DateTime          @default(dbgenerated("CURRENT_DATE")) @db.Date
   trang_thai      String
   khach_dat       String            @db.VarChar(20)
@@ -280,7 +278,7 @@ model phong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_boi_thuong {
-  ma_ptdb    String     @id @db.VarChar(20)
+  ma_ptdb    String     @id @default(dbgenerated("('PTBT'::text || lpad((nextval('pt_boi_thuong_ma_ptdb_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay       DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
   ghi_chu    String?
   trang_thai String
@@ -293,7 +291,7 @@ model pt_boi_thuong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_dat_coc {
-  ma_ptdc       String        @id @db.VarChar(20)
+  ma_ptdc       String        @id @default(dbgenerated("('PTDC'::text || lpad((nextval('pt_dat_coc_ma_ptdc_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay          DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
   ghi_chu       String?
   trang_thai    String
@@ -308,7 +306,7 @@ model pt_dat_coc {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_hop_dong {
-  ma_pthd       String        @id @db.VarChar(20)
+  ma_pthd       String        @id @default(dbgenerated("('PTHD'::text || lpad((nextval('pt_hop_dong_ma_pthd_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay          DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
   ghi_chu       String?
   trang_thai    String
@@ -323,7 +321,7 @@ model pt_hop_dong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_tra_phong {
-  ma_pttp         String          @id @db.VarChar(20)
+  ma_pttp         String          @id @default(dbgenerated("('PTTP'::text || lpad((nextval('pt_tra_phong_ma_pttp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay            DateTime        @default(dbgenerated("CURRENT_DATE")) @db.Date
   ghi_chu         String?
   trang_thai      String
@@ -337,13 +335,13 @@ model pt_tra_phong {
 }
 
 model quy_dinh_hoan_coc {
-  ma_qdhc  String @id @db.VarChar(20)
+  ma_qdhc  Int    @id @default(autoincrement())
   ten_qd   String
   noi_dung String
 }
 
 model quy_dinh_ktx {
-  ma_qdktx String @id @db.VarChar(20)
+  ma_qdktx Int    @id @default(autoincrement())
   ten_qd   String
   noi_dung String
 }
@@ -360,7 +358,7 @@ model tieu_chi {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model vat_dung {
-  ma_vd          String  @id @db.VarChar(20)
+  ma_vd          String  @id @default(dbgenerated("('VD'::text || lpad((nextval('vat_dung_ma_vd_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ten_vd         String
   gia_boi_thuong Decimal @db.Decimal(12, 2)
   vd_bg          vd_bg[]
