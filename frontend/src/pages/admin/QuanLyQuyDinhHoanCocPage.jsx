@@ -29,7 +29,7 @@ function ProtectedDialog({ onClose }) {
       <div style={S.confirmBox}>
         <h3 style={S.confirmTitle}>Không thể thực hiện</h3>
         <p style={S.confirmBody}>
-          Đây là quy định gốc để tính toán tự động. Bạn không thể xóa, mà chỉ có thể <strong>cập nhật lại tỷ lệ phần trăm hoặc nội dung</strong>.
+          Đây là quy định gốc để tính toán tự động. Bạn không thể xóa, mà chỉ có thể <strong>cập nhật lại nội dung</strong>.
         </p>
         <div style={S.confirmFooter}>
           <button style={S.btnPrimary} onClick={onClose}>Đã hiểu</button>
@@ -74,8 +74,10 @@ function FormView({ mode, initial, onSave, onCancel, submitting, serverError }) 
 
   const validate = () => {
     const e = {}
-    if (!form.ten_qd.trim())   e.ten_qd   = 'Vui lòng nhập tên quy định.'
-    if (!form.noi_dung.trim()) e.noi_dung  = 'Vui lòng nhập nội dung quy định.'
+    // Chỉ validate tên nếu không phải quy định gốc
+    if (!(isEdit && isProtected(initial.ma_qdhc)) && !form.ten_qd.trim())
+      e.ten_qd = 'Vui lòng nhập tên quy định.'
+    if (!form.noi_dung.trim()) e.noi_dung = 'Vui lòng nhập nội dung quy định.'
     return e
   }
 
@@ -89,22 +91,34 @@ function FormView({ mode, initial, onSave, onCancel, submitting, serverError }) 
     <section>
       <div style={{ marginBottom: '24px' }}>
         <PageTitle
-          title={isEdit ? 'Cập nhật quy định' : 'Thêm quy định mới'}
+          title={isEdit ? 'Cập nhật quy định' : 'Thêm quy định hoàn cọc'}
           description={isEdit
-            ? `Mã quy định: ${initial.ma_qdhc}`
-            : 'Thêm quy định hoàn cọc mới cho hệ thống ký túc xá.'}
+            ? `Quy định hoàn cọc: ${initial.ma_qdhc}`
+            : 'Vui lòng điền đầy đủ các thông số hoàn trả cọc theo quy định dưới đây.'}
         />
       </div>
 
       <div style={S.formCard}>
         {/* Tên quy định */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={S.label}>Tên quy định <span style={{ color: '#c0392b' }}>*</span></label>
+          <label style={S.label}>
+            Tên quy định{!isEdit && <span style={{ color: '#c0392b' }}> *</span>}
+            {isEdit && isProtected(initial.ma_qdhc) && (
+              <span style={{ marginLeft: '8px', fontSize: '12px', color: '#9aa090', fontWeight: 400 }}>
+                (Quy định gốc — không thể đổi tên)
+              </span>
+            )}
+          </label>
           <input
-            style={{ ...S.input, ...(errors.ten_qd ? S.inputErr : {}) }}
+            style={{
+              ...S.input,
+              ...(errors.ten_qd ? S.inputErr : {}),
+              ...(isEdit && isProtected(initial.ma_qdhc) ? S.inputDisabled : {}),
+            }}
             placeholder="Ví dụ: Hoàn 80%, Hoàn 100%..."
             value={form.ten_qd}
             onChange={e => set('ten_qd', e.target.value)}
+            readOnly={isEdit && isProtected(initial.ma_qdhc)}
           />
           {errors.ten_qd && <p style={S.errMsg}>{errors.ten_qd}</p>}
         </div>
@@ -115,7 +129,7 @@ function FormView({ mode, initial, onSave, onCancel, submitting, serverError }) 
           <textarea
             rows={4}
             style={{ ...S.input, resize: 'vertical', lineHeight: 1.6, ...(errors.noi_dung ? S.inputErr : {}) }}
-            placeholder="Mô tả chi tiết điều kiện áp dụng quy định hoàn cọc..."
+            placeholder="Mô tả chi tiết các trường hợp được áp dụng quy định này..."
             value={form.noi_dung}
             onChange={e => set('noi_dung', e.target.value)}
           />
@@ -253,7 +267,7 @@ export default function QuanLyQuyDinhHoanCocPage() {
         </svg>
         <input
           style={{ ...S.input, paddingLeft: '38px', paddingTop: '10px', paddingBottom: '10px' }}
-          placeholder="Tìm kiếm theo tên hoặc nội dung quy định..."
+          placeholder="Tìm kiếm theo mã hoặc tên quy định..."
           value={search}
           onChange={e => handleSearch(e.target.value)}
         />
@@ -297,7 +311,7 @@ export default function QuanLyQuyDinhHoanCocPage() {
                       <button
                         style={S.iconBtn}
                         title="Chỉnh sửa"
-                        onClick={() => { if (isProtected(item.ma_qdhc)) { setShowProtected(true); return } setEditTarget(item); setServerError(''); setView('edit') }}
+                        onClick={() => { setEditTarget(item); setServerError(''); setView('edit') }}
                       >
                         <IconEdit />
                       </button>
@@ -343,6 +357,7 @@ const S = {
   btnAdd:        { flexShrink: 0, padding: '10px 20px', backgroundColor: '#3b4f27', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' },
   input:         { width: '100%', boxSizing: 'border-box', padding: '10px 14px', border: '1.5px solid #dde3d8', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', color: '#1a1f14', outline: 'none', backgroundColor: '#fff' },
   inputErr:      { borderColor: '#c0392b' },
+  inputDisabled: { backgroundColor: '#f4f6f1', color: '#6b7560', cursor: 'not-allowed' },
   tableWrap:     { border: '1px solid #dde3d8', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#fff', maxHeight: '60vh', overflowY: 'auto' },
   table:         { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
   th:            { padding: '12px 18px', textAlign: 'left', backgroundColor: '#fff', color: '#6b7560', fontWeight: 700, fontSize: '12px', letterSpacing: '0.4px', borderBottom: '1px solid #dde3d8', position: 'sticky', top: 0, zIndex: 1 },
@@ -363,7 +378,7 @@ const S = {
   confirmBody:   { margin: '0 0 24px', fontSize: '14px', color: '#4a4a4a', lineHeight: 1.6 },
   confirmFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px' },
   // toast
-  toast:         { position: 'fixed', bottom: '24px', right: '24px', padding: '12px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
+  toast:         { position: 'fixed', top: '120px', right: '450px', padding: '12px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
   toastSuccess:  { backgroundColor: '#2e7d32', color: '#fff' },
   toastError:    { backgroundColor: '#c0392b', color: '#fff' },
 }

@@ -6,9 +6,9 @@ export async function getQuyDinhList(req, res) {
 
   const where = q
     ? { OR: [
-        { ten_qd:   { contains: q, mode: 'insensitive' } },
-        { noi_dung: { contains: q, mode: 'insensitive' } },
-      ]}
+        { ten_qd:  { contains: q, mode: 'insensitive' } },
+        { ma_qdhc: isNaN(parseInt(q)) ? undefined : parseInt(q) },
+      ].filter(Boolean) }
     : {}
 
   try {
@@ -44,13 +44,16 @@ export async function updateQuyDinh(req, res) {
   const id = parseInt(req.params.id, 10)
   const { ten_qd, noi_dung } = req.body
 
-  if (!ten_qd?.trim())   return res.status(400).json({ message: 'Vui lòng nhập tên quy định.' })
   if (!noi_dung?.trim()) return res.status(400).json({ message: 'Vui lòng nhập nội dung quy định.' })
 
   try {
     const updated = await prisma.quy_dinh_hoan_coc.update({
       where: { ma_qdhc: id },
-      data:  { ten_qd: ten_qd.trim(), noi_dung: noi_dung.trim() },
+      data: {
+        // ten_qd chỉ update nếu được gửi lên (quy định gốc không gửi)
+        ...(ten_qd?.trim() ? { ten_qd: ten_qd.trim() } : {}),
+        noi_dung: noi_dung.trim(),
+      },
     })
     res.json(updated)
   } catch (err) {
