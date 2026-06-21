@@ -5,6 +5,7 @@ import roomRoutes from './room.routes.js'
 import { authMiddleware } from '../middlewares/authMiddleware.js'
 import dichVuRoutes from './dich-vu.routes.js'
 import phongGiuongRoutes from './phong-giuong.routes.js'
+import vatDungRoutes from './vat-dung.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -12,4 +13,5 @@ router.use('/users', authMiddleware, userRoutes)
 router.use('/rooms', authMiddleware, roomRoutes)
 router.use('/dich-vu', dichVuRoutes)
 router.use('/phong-giuong', phongGiuongRoutes)
+router.use('/vat-dung', vatDungRoutes)
 export default router
