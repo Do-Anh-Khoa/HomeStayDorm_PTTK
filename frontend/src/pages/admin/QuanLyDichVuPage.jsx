@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import PageTitle from '../../components/common/PageTitle.jsx'
 import api from '../../services/api.js'
 
-// ── helpers ──────────────────────────────────────────────────
+//  helpers 
 function fmtCurrency(val) {
   if (val == null || val === '') return '—'
   return Number(val).toLocaleString('vi-VN')
 }
 
-// ── icons ────────────────────────────────────────────────────
+// icons 
 const IconEdit = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -24,7 +24,7 @@ const IconTrash = () => (
   </svg>
 )
 
-// ── Delete Confirm Dialog (giống ảnh mẫu) ───────────────────
+//  Delete Confirm Dialog
 function DeleteDialog({ item, onCancel, onConfirm, submitting }) {
   return (
     <div style={S.overlay}>
@@ -44,7 +44,7 @@ function DeleteDialog({ item, onCancel, onConfirm, submitting }) {
   )
 }
 
-// ── Form View (Add / Edit) ───────────────────────────────────
+//  Form View (Add / Edit) 
 const emptyForm = { ten_dv: '', don_vi_tinh: '', gia_dv: '' }
 
 function FormView({ mode, initial, onSave, onCancel, submitting, serverError }) {
@@ -149,7 +149,7 @@ function FormView({ mode, initial, onSave, onCancel, submitting, serverError }) 
   )
 }
 
-// ── Main Page ────────────────────────────────────────────────
+//  Main Page
 export default function QuanLyDichVuPage() {
   const [view, setView]               = useState('list')
   const [list, setList]               = useState([])
@@ -249,32 +249,32 @@ export default function QuanLyDichVuPage() {
 
   return (
     <section>
-      {/* Header row */}
-      <div style={S.listHeader}>
-        <div>
-          <PageTitle
-  title="QUẢN LÝ DỊCH VỤ"
-  description="Danh sách dịch vụ có trên toàn bộ hệ thống."
-/>
-        </div>
-        <button style={S.btnAdd} onClick={() => { setServerError(''); setView('add') }}>
-          + Thêm dịch vụ
-        </button>
-      </div>
-
       {/* Search */}
-      <div style={{ position: 'relative', marginBottom: '12px' }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa090" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          style={{ ...S.input, paddingLeft: '38px', paddingTop: '10px', paddingBottom: '10px' }}
-          placeholder="Tìm kiếm theo mã hoặc tên dịch vụ..."
-          value={search}
-          onChange={e => handleSearch(e.target.value)}
-        />
-      </div>
+<div style={{ position: 'relative', marginBottom: '12px' }}>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa090" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+  <input
+    style={{ ...S.input, paddingLeft: '38px', paddingTop: '10px', paddingBottom: '10px' }}
+    placeholder="Tìm kiếm theo mã hoặc tên dịch vụ..."
+    value={search}
+    onChange={e => handleSearch(e.target.value)}
+  />
+</div>
+
+{/* Header row */}
+<div style={S.listHeader}>
+  <div>
+    <PageTitle
+      title="QUẢN LÝ DỊCH VỤ"
+      description="Danh sách dịch vụ có trên toàn bộ hệ thống."
+    />
+  </div>
+  <button style={S.btnAdd} onClick={() => { setServerError(''); setView('add') }}>
+    + Thêm dịch vụ
+  </button>
+</div>
 
       {/* Table */}
       <div style={S.tableWrap}>
@@ -343,7 +343,7 @@ export default function QuanLyDichVuPage() {
   )
 }
 
-// ── styles ───────────────────────────────────────────────────
+//  styles
 const S = {
   pageHeading:    { margin: '0 0 4px', fontSize: '26px', fontWeight: 800, color: '#1a1f14', letterSpacing: '-0.3px' },
   pageSubheading: { margin: 0, fontSize: '14px', color: '#6b7560' },
@@ -375,7 +375,7 @@ const S = {
   btnSecondary:   { padding: '8px 20px', backgroundColor: '#fff', color: '#1a1f14', border: '1.5px solid #dde3d8', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
   btnPrimary:     { padding: '8px 20px', backgroundColor: '#3b4f27', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   // toast
-  toast:          { position: 'fixed', top: '82px', right: '450px', padding: '12px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
+  toast:          { position: 'fixed', top: '120px', right: '450px', padding: '12px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
   toastSuccess:   { backgroundColor: '#2e7d32', color: '#fff' },
   toastError:     { backgroundColor: '#c0392b', color: '#fff' },
 }
