@@ -6,15 +6,15 @@ export default function Sidebar({ role, onLogout, isLoggingOut = false }) {
   const menus = menuByRole[role] || []
 
   return (
-    <aside className="sticky top-0 flex h-screen min-h-screen w-[255px] shrink-0 flex-col border-r border-[#d8d9cc] bg-[#fffef1]">
-      <div className="flex h-[68px] flex-col justify-center border-b border-[#cfd3c1] px-6">
+    <aside className="sticky top-0 flex h-dvh w-[255px] shrink-0 flex-col overflow-hidden border-r border-[#d8ddc8] bg-[#fffef1]">
+      <div className="flex h-20 shrink-0 flex-col justify-center border-b border-[#d8ddc8] px-6">
         <p className="text-2xl font-extrabold leading-none tracking-[-0.02em] text-[#3f6b2a]">
           DormSystem
         </p>
         <p className="mt-1 text-[13px] font-medium text-[#4f554a]">Management Portal</p>
       </div>
 
-      <nav className="space-y-1.5 px-0 pt-10">
+      <nav className="sidebar-scroll min-h-0 flex-1 space-y-1.5 overflow-x-hidden overflow-y-auto py-6">
         {menus.map((item) => {
           if (item.type === 'section') {
             return (
@@ -48,10 +48,7 @@ export default function Sidebar({ role, onLogout, isLoggingOut = false }) {
         })}
       </nav>
 
-      <div className="flex-1" />
-
-      <div className="px-0 pb-9">
-        <div className="mx-3 mb-4 border-t border-[#d6d7c9]" />
+      <div className="shrink-0 border-t border-[#d8ddc8] py-4">
         <button
           type="button"
           onClick={onLogout}
