@@ -30,15 +30,15 @@ export default function MainLayout({ role, setRole }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f4f4f4] text-[#182016]">
+    <div className="flex min-h-dvh w-full overflow-x-hidden bg-[#f4f4f4] text-[#182016]">
       <Sidebar
         role={role}
         onLogout={() => setIsLogoutDialogOpen(true)}
         isLoggingOut={isLoggingOut}
       />
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <Header role={role} />
-        <main className="w-full px-[25px] pb-16 pt-[90px]">
+        <main className="app-main min-w-0 flex-1 overflow-x-hidden px-8 py-6">
           <Outlet />
         </main>
       </div>

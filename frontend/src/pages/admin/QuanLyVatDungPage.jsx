@@ -533,15 +533,17 @@ const S = {
     borderColor: '#c0392b',
   },
   tableWrap: {
+    maxWidth: '100%',
     border: '1px solid #dde3d8',
     borderRadius: '10px',
-    overflow: 'hidden',
     backgroundColor: '#fff',
     maxHeight: '60vh',
+    overflowX: 'auto',
     overflowY: 'auto',
   },
   table: {
     width: '100%',
+    minWidth: '640px',
     borderCollapse: 'collapse',
     fontSize: '14px',
   },
@@ -585,6 +587,7 @@ const S = {
     fontSize: '14px',
   },
   formCard: {
+    maxWidth: '100%',
     backgroundColor: '#fff',
     border: '1px solid #dde3d8',
     borderRadius: '12px',
@@ -623,7 +626,8 @@ const S = {
   confirmBox: {
     backgroundColor: '#fff',
     borderRadius: '12px',
-    width: '400px',
+    width: 'min(400px, calc(100vw - 32px))',
+    maxWidth: '100%',
     padding: '28px 28px 24px',
     boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
   },
@@ -696,7 +700,9 @@ const S = {
   toast: {
     position: 'fixed',
     top: '90px',
-    right: '510px',
+    right: '24px',
+    maxWidth: 'calc(100vw - 48px)',
+    overflowWrap: 'anywhere',
     padding: '12px 20px',
     borderRadius: '10px',
     fontSize: '14px',

@@ -1,17 +1,50 @@
 @import "tailwindcss";
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
-html, body, #root {
-  height: 100%;
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100dvh;
 }
 
 body {
   font-family: 'Inter', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   background: #ffffff;
+}
+
+.app-main > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c8cfb8 transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #c8cfb8;
+  border-radius: 999px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
