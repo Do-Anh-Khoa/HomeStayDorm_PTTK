@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import PageTitle from '../../components/common/PageTitle.jsx'
 import api from '../../services/api.js'
 
-// ── icons ─────────────────────────────────────────────────
+//  icons
 const IconEdit = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -18,11 +18,11 @@ const IconTrash = () => (
   </svg>
 )
 
-// ── constants ─────────────────────────────────────────────
+// constants 
 const PROTECTED_IDS = [1, 2, 3, 4]
 const isProtected = (id) => PROTECTED_IDS.includes(Number(id))
 
-// ── Protected Dialog ──────────────────────────────────────
+// Protected Dialog 
 function ProtectedDialog({ onClose }) {
   return (
     <div style={S.overlay}>
@@ -39,7 +39,7 @@ function ProtectedDialog({ onClose }) {
   )
 }
 
-// ── Delete Dialog ─────────────────────────────────────────
+// Delete Dialog
 function DeleteDialog({ item, onCancel, onConfirm, submitting }) {
   return (
     <div style={S.overlay}>
@@ -59,7 +59,7 @@ function DeleteDialog({ item, onCancel, onConfirm, submitting }) {
   )
 }
 
-// ── Form View (Add / Edit) ────────────────────────────────
+// Form View (Add / Edit) 
 const emptyForm = { ten_qd: '', noi_dung: '' }
 
 function FormView({ mode, initial, onSave, onCancel, submitting, serverError }) {
@@ -152,7 +152,7 @@ function FormView({ mode, initial, onSave, onCancel, submitting, serverError }) 
 
 
 
-// ── Main Page ─────────────────────────────────────────────
+//  Main Page
 export default function QuanLyQuyDinhHoanCocPage() {
   const [view, setView]               = useState('list')
   const [list, setList]               = useState([])
@@ -351,7 +351,7 @@ export default function QuanLyQuyDinhHoanCocPage() {
   )
 }
 
-// ── styles ────────────────────────────────────────────────
+//  styles 
 const S = {
   listHeader:    { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' },
   btnAdd:        { flexShrink: 0, padding: '10px 20px', backgroundColor: '#3b4f27', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' },
