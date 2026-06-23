@@ -1,9 +1,11 @@
 import { Router } from 'express'
-import { getAllChiNhanh } from '../controllers/chi-nhanh.controller.js'
+import { getAllChiNhanh, createChiNhanh, updateChiNhanh, deleteChiNhanh } from '../controllers/chi-nhanh.controller.js'
 
 const router = Router()
 
-// GET /api/chi-nhanh - Lấy danh sách chi nhánh
 router.get('/', getAllChiNhanh)
+router.post('/', createChiNhanh)
+router.put('/:ma', updateChiNhanh)
+router.delete('/:ma', deleteChiNhanh)
 
 export default router
