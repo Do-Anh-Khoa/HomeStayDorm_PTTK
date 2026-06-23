@@ -378,7 +378,7 @@ const S = {
   confirmBody:   { margin: '0 0 24px', fontSize: '14px', color: '#4a4a4a', lineHeight: 1.6 },
   confirmFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px' },
   // toast
-  toast:         { position: 'fixed', top: '120px', right: '450px', padding: '12px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
+  toast:          { position: 'fixed', top: '82px', right: '24px', maxWidth: 'calc(100vw - 48px)', overflowWrap: 'anywhere', padding: '12px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
   toastSuccess:  { backgroundColor: '#2e7d32', color: '#fff' },
   toastError:    { backgroundColor: '#c0392b', color: '#fff' },
 }
