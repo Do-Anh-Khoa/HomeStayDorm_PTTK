@@ -10,7 +10,7 @@ datasource db {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model bien_ban_ban_giao {
   ma_bb         String        @id @default(dbgenerated("('BB'::text || lpad((nextval('bien_ban_ban_giao_ma_bb_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay_bg       DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ngay_bg       DateTime      @default(now()) @db.Timestamp(6)
   tinh_trang_vs String
   nv_quan_ly    String        @db.VarChar(20)
   ma_hdt        String        @db.VarChar(20)
@@ -23,7 +23,7 @@ model bien_ban_ban_giao {
 
 model boi_thuong {
   ma_bt         String          @id @default(dbgenerated("('BT'::text || lpad((nextval('boi_thuong_ma_bt_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay_bt       DateTime        @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ngay_bt       DateTime        @default(now()) @db.Timestamp(6)
   ma_kh         String          @db.VarChar(20)
   nv_quan_ly    String          @db.VarChar(20)
   khach_hang    khach_hang      @relation(fields: [ma_kh], references: [ma_kh], onDelete: NoAction, onUpdate: NoAction)
@@ -46,7 +46,7 @@ model chi_nhanh {
 model chi_tiet_dv {
   ma_ct      Int      @id @default(autoincrement())
   so_luong   Int
-  ngay       DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ngay       DateTime @default(now()) @db.Timestamp(6)
   thanh_tien Decimal  @db.Decimal(12, 2)
   trang_thai String
   ma_dv      String   @db.VarChar(20)
@@ -93,10 +93,10 @@ model giuong {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model ho_so_dang_ky {
   ma_dk                                           String               @id @default(dbgenerated("('HSDK'::text || lpad((nextval('ho_so_dang_ky_ma_dk_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay_lap                                        DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ngay_lap                                        DateTime             @default(now()) @db.Timestamp(6)
   hinh_thuc_thue                                  String
   so_nguoi                                        Int
-  thoi_gian_vao                                   DateTime             @db.Date
+  thoi_gian_vao                                   DateTime             @db.Timestamp(6)
   thoi_han_thue                                   Int
   tieu_chi                                        String?
   trang_thai                                      String
@@ -112,7 +112,7 @@ model ho_so_dang_ky {
 
 model ho_so_tra_phong {
   ma_tp              String               @id @default(dbgenerated("('HSTP'::text || lpad((nextval('ho_so_tra_phong_ma_tp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay_tp            DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ngay_tp            DateTime             @default(now()) @db.Timestamp(6)
   nv_sale            String               @db.VarChar(20)
   ma_pdc             String               @db.VarChar(20)
   ma_hdt             String               @db.VarChar(20)
@@ -132,7 +132,7 @@ model ho_so_tra_phong {
 model hop_dong_thue {
   ma_hdt            String              @id @default(dbgenerated("('HDT'::text || lpad((nextval('hop_dong_thue_ma_hdt_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   tg_tao_hd         DateTime            @default(now()) @db.Timestamp(6)
-  tg_vao            DateTime            @db.Date
+  tg_vao            DateTime            @db.Timestamp(6)
   thoi_han_thue     Int
   ky_tt             Int
   nv_phu_trach      String              @db.VarChar(20)
@@ -203,30 +203,34 @@ model loai_phong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model nhanvien {
-  ma_nv              String               @id @db.VarChar(20)
-  ten_nv             String
-  mat_khau           String
-  cccd               String               @unique @db.VarChar(20)
-  sdt                String               @db.VarChar(15)
-  gioi_tinh          String
-  ngay_sinh          DateTime             @db.Date
-  luong              Decimal              @db.Decimal(12, 2)
-  loai_nv            String
-  email              String               @unique
-  tinh_trang         String
-  ma_cn              String               @db.VarChar(20)
-  bien_ban_ban_giao  bien_ban_ban_giao[]
-  boi_thuong         boi_thuong[]
-  ho_so_tra_phong    ho_so_tra_phong[]
-  hop_dong_thue      hop_dong_thue[]
-  lich_hen_tra_phong lich_hen_tra_phong[]
-  lich_hen_xem_phong lich_hen_xem_phong[]
-  chi_nhanh          chi_nhanh            @relation(fields: [ma_cn], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
-  phieu_dat_coc      phieu_dat_coc[]
-  pt_boi_thuong      pt_boi_thuong[]
-  pt_dat_coc         pt_dat_coc[]
-  pt_hop_dong        pt_hop_dong[]
-  pt_tra_phong       pt_tra_phong[]
+  ma_nv                                             String               @id @db.VarChar(20)
+  ten_nv                                            String
+  mat_khau                                          String
+  cccd                                              String               @unique @db.VarChar(20)
+  sdt                                               String               @db.VarChar(15)
+  gioi_tinh                                         String
+  ngay_sinh                                         DateTime             @db.Date
+  luong                                             Decimal              @db.Decimal(12, 2)
+  loai_nv                                           String
+  email                                             String               @unique
+  tinh_trang                                        String
+  ma_cn                                             String               @db.VarChar(20)
+  bien_ban_ban_giao                                 bien_ban_ban_giao[]
+  boi_thuong                                        boi_thuong[]
+  ho_so_tra_phong                                   ho_so_tra_phong[]
+  hop_dong_thue                                     hop_dong_thue[]
+  lich_hen_tra_phong                                lich_hen_tra_phong[]
+  lich_hen_xem_phong                                lich_hen_xem_phong[]
+  chi_nhanh                                         chi_nhanh            @relation(fields: [ma_cn], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
+  phieu_dat_coc                                     phieu_dat_coc[]
+  pt_boi_thuong_pt_boi_thuong_nv_cap_nhatTonhanvien pt_boi_thuong[]      @relation("pt_boi_thuong_nv_cap_nhatTonhanvien")
+  pt_boi_thuong                                     pt_boi_thuong[]
+  pt_dat_coc_pt_dat_coc_nv_cap_nhatTonhanvien       pt_dat_coc[]         @relation("pt_dat_coc_nv_cap_nhatTonhanvien")
+  pt_dat_coc                                        pt_dat_coc[]
+  pt_hop_dong_pt_hop_dong_nv_cap_nhatTonhanvien     pt_hop_dong[]        @relation("pt_hop_dong_nv_cap_nhatTonhanvien")
+  pt_hop_dong                                       pt_hop_dong[]
+  pt_tra_phong_pt_tra_phong_nv_cap_nhatTonhanvien   pt_tra_phong[]       @relation("pt_tra_phong_nv_cap_nhatTonhanvien")
+  pt_tra_phong                                      pt_tra_phong[]
 
   @@index([ma_cn], map: "idx_nhanvien_ma_cn")
 }
@@ -246,7 +250,7 @@ model phien_dang_nhap {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model phieu_dat_coc {
   ma_pdc          String            @id @default(dbgenerated("('PDC'::text || lpad((nextval('phieu_dat_coc_ma_pdc_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay_dc         DateTime          @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ngay_dc         DateTime          @default(now()) @db.Timestamp(6)
   trang_thai      String
   khach_dat       String            @db.VarChar(20)
   nv_sale         String            @db.VarChar(20)
@@ -259,6 +263,7 @@ model phieu_dat_coc {
 
   @@index([khach_dat], map: "idx_phieu_dat_coc_khach_dat")
   @@index([nv_sale], map: "idx_phieu_dat_coc_nv_sale")
+  @@index([ngay_dc, trang_thai], map: "idx_phieu_dat_coc_qua_han")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -279,60 +284,78 @@ model phong {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_boi_thuong {
-  ma_ptdb    String     @id @default(dbgenerated("('PTBT'::text || lpad((nextval('pt_boi_thuong_ma_ptdb_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay       DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  ghi_chu    String?
-  trang_thai String
-  tong_tien  Decimal    @db.Decimal(12, 2)
-  nv_ke_toan String     @db.VarChar(20)
-  ma_bt      String     @db.VarChar(20)
-  boi_thuong boi_thuong @relation(fields: [ma_bt], references: [ma_bt], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien   nhanvien   @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  ma_ptdb                                      String     @id @default(dbgenerated("('PTBT'::text || lpad((nextval('pt_boi_thuong_ma_ptdb_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
+  ngay                                         DateTime   @default(now()) @db.Timestamp(6)
+  ngay_thanh_toan                              DateTime?  @db.Timestamp(6)
+  ghi_chu                                      String?
+  trang_thai                                   String
+  tong_tien                                    Decimal    @db.Decimal(12, 2)
+  nv_ke_toan                                   String     @db.VarChar(20)
+  nv_cap_nhat                                  String     @db.VarChar(20)
+  ma_bt                                        String     @db.VarChar(20)
+  boi_thuong                                   boi_thuong @relation(fields: [ma_bt], references: [ma_bt], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_boi_thuong_nv_cap_nhatTonhanvien nhanvien   @relation("pt_boi_thuong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien                                     nhanvien   @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([nv_cap_nhat], map: "idx_pt_boi_thuong_nv_cap_nhat")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_dat_coc {
-  ma_ptdc       String        @id @default(dbgenerated("('PTDC'::text || lpad((nextval('pt_dat_coc_ma_ptdc_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay          DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
-  ghi_chu       String?
-  trang_thai    String
-  tong_tien     Decimal       @db.Decimal(12, 2)
-  nv_ke_toan    String        @db.VarChar(20)
-  ma_pdc        String        @db.VarChar(20)
-  phieu_dat_coc phieu_dat_coc @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien      nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  ma_ptdc                                   String        @id @default(dbgenerated("('PTDC'::text || lpad((nextval('pt_dat_coc_ma_ptdc_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
+  ngay                                      DateTime      @default(now()) @db.Timestamp(6)
+  ngay_thanh_toan                           DateTime?     @db.Timestamp(6)
+  ghi_chu                                   String?
+  trang_thai                                String
+  tong_tien                                 Decimal       @db.Decimal(12, 2)
+  nv_ke_toan                                String        @db.VarChar(20)
+  nv_cap_nhat                               String        @db.VarChar(20)
+  ma_pdc                                    String        @db.VarChar(20)
+  phieu_dat_coc                             phieu_dat_coc @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_dat_coc_nv_cap_nhatTonhanvien nhanvien      @relation("pt_dat_coc_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien                                  nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([ma_pdc], map: "idx_pt_dat_coc_ma_pdc")
+  @@index([nv_cap_nhat], map: "idx_pt_dat_coc_nv_cap_nhat")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_hop_dong {
-  ma_pthd       String        @id @default(dbgenerated("('PTHD'::text || lpad((nextval('pt_hop_dong_ma_pthd_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay          DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
-  ghi_chu       String?
-  trang_thai    String
-  tong_tien     Decimal       @db.Decimal(12, 2)
-  nv_ke_toan    String        @db.VarChar(20)
-  ma_hdt        String        @db.VarChar(20)
-  hop_dong_thue hop_dong_thue @relation(fields: [ma_hdt], references: [ma_hdt], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien      nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  ma_pthd                                    String        @id @default(dbgenerated("('PTHD'::text || lpad((nextval('pt_hop_dong_ma_pthd_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
+  ngay                                       DateTime      @default(now()) @db.Timestamp(6)
+  ngay_thanh_toan                            DateTime?     @db.Timestamp(6)
+  ghi_chu                                    String?
+  trang_thai                                 String
+  tong_tien                                  Decimal       @db.Decimal(12, 2)
+  nv_ke_toan                                 String        @db.VarChar(20)
+  nv_cap_nhat                                String        @db.VarChar(20)
+  ma_hdt                                     String        @db.VarChar(20)
+  hop_dong_thue                              hop_dong_thue @relation(fields: [ma_hdt], references: [ma_hdt], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_hop_dong_nv_cap_nhatTonhanvien nhanvien      @relation("pt_hop_dong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien                                   nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([ma_hdt], map: "idx_pt_hop_dong_ma_hdt")
+  @@index([nv_cap_nhat], map: "idx_pt_hop_dong_nv_cap_nhat")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pt_tra_phong {
-  ma_pttp         String          @id @default(dbgenerated("('PTTP'::text || lpad((nextval('pt_tra_phong_ma_pttp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay            DateTime        @default(dbgenerated("CURRENT_DATE")) @db.Date
-  ghi_chu         String?
-  trang_thai      String
-  tong_tien       Decimal         @db.Decimal(12, 2)
-  tien_hoan_coc   Decimal         @db.Decimal(12, 2)
-  tien_khau_tru   Decimal         @db.Decimal(12, 2)
-  nv_ke_toan      String          @db.VarChar(20)
-  ma_tp           String          @db.VarChar(20)
-  ho_so_tra_phong ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien        nhanvien        @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  ma_pttp                                     String          @id @default(dbgenerated("('PTTP'::text || lpad((nextval('pt_tra_phong_ma_pttp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
+  ngay                                        DateTime        @default(now()) @db.Timestamp(6)
+  ngay_thanh_toan                             DateTime?       @db.Timestamp(6)
+  ghi_chu                                     String?
+  trang_thai                                  String
+  tong_tien                                   Decimal         @db.Decimal(12, 2)
+  tien_hoan_coc                               Decimal         @db.Decimal(12, 2)
+  tien_khau_tru                               Decimal         @db.Decimal(12, 2)
+  nv_ke_toan                                  String          @db.VarChar(20)
+  nv_cap_nhat                                 String          @db.VarChar(20)
+  ma_tp                                       String          @db.VarChar(20)
+  ho_so_tra_phong                             ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_tra_phong_nv_cap_nhatTonhanvien nhanvien        @relation("pt_tra_phong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien                                    nhanvien        @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([nv_cap_nhat], map: "idx_pt_tra_phong_nv_cap_nhat")
 }
 
 model quy_dinh_hoan_coc {
