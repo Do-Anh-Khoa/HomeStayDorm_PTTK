@@ -55,6 +55,20 @@ export function getStoredRole() {
   return localStorage.getItem('role') || sessionStorage.getItem('role') || ''
 }
 
+export function getStoredUser() {
+  const rawUser = localStorage.getItem('user') || sessionStorage.getItem('user')
+
+  if (!rawUser) {
+    return null
+  }
+
+  try {
+    return JSON.parse(rawUser)
+  } catch {
+    return null
+  }
+}
+
 export function clearAuthSession() {
   for (const key of AUTH_STORAGE_KEYS) {
     localStorage.removeItem(key)
