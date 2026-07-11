@@ -113,6 +113,7 @@ model ho_so_dang_ky {
 model ho_so_tra_phong {
   ma_tp              String               @id @default(dbgenerated("('HSTP'::text || lpad((nextval('ho_so_tra_phong_ma_tp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
   ngay_tp            DateTime             @default(now()) @db.Timestamp(6)
+  ngay_huy           DateTime?            @db.Timestamp(6)
   nv_sale            String               @db.VarChar(20)
   ma_pdc             String               @db.VarChar(20)
   ma_hdt             String               @db.VarChar(20)
@@ -179,6 +180,8 @@ model lich_hen_tra_phong {
   nv_sale         String          @db.VarChar(20)
   ho_so_tra_phong ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: Cascade, onUpdate: NoAction)
   nhanvien        nhanvien        @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ma_tp, tg_hen], map: "idx_lich_hen_tra_phong_ma_tp_tg_hen")
 }
 
 model lich_hen_xem_phong {
