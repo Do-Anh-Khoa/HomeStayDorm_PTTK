@@ -2,8 +2,41 @@ import { Prisma } from '@prisma/client'
 import prisma from '../config/prisma.js'
 
 const normalizeBoolean = value => {
-  return value === true || value === 'true' || value === 1 || value === '1'
+  return value === true || value === 'true' || value === 1 || value === '1' || value === 't'
 }
+
+const getCurrentEmployee = async req => {
+  const maNv =
+    req.auth?.ma_nv ||
+    req.authSession?.ma_nv ||
+    null
+
+  if (!maNv) {
+    return null
+  }
+
+  const rows = await prisma.$queryRaw`
+    SELECT
+      ma_nv,
+      ten_nv,
+      ma_cn
+    FROM nhanvien
+    WHERE ma_nv = ${maNv}
+    LIMIT 1
+  `
+
+  return rows[0] || null
+}
+
+const buildSameBranchExistsSql = maCn => Prisma.sql`
+  EXISTS (
+    SELECT 1
+    FROM dat_coc_giuong dcg
+    JOIN phong p ON p.ma_phong = dcg.ma_phong
+    WHERE dcg.ma_pdc = h.ma_pdc
+      AND p.chi_nhanh = ${maCn}
+  )
+`
 
 const mapReturnRoomRow = row => ({
   ma_tp: row.ma_tp,
@@ -19,7 +52,7 @@ const mapReturnRoomRow = row => ({
   ten_khach_hang: row.ten_khach_hang || row.ma_khach_thue,
 
   ma_phong: row.ma_phong || 'Chưa có phòng',
-  ghi_nhan_hu_hai: Boolean(row.ghi_nhan_hu_hai),
+  ghi_nhan_hu_hai: normalizeBoolean(row.ghi_nhan_hu_hai),
 })
 
 const mapDetailItem = row => ({
@@ -58,7 +91,7 @@ const getCustomerColumnSql = async () => {
   }
 }
 
-const getBaseReturnRoomSql = (nameSql, phoneSql) => Prisma.sql`
+const getBaseReturnRoomSql = (nameSql, phoneSql, maCn) => Prisma.sql`
   SELECT
     h.ma_tp,
     h.ngay_tp,
@@ -76,7 +109,9 @@ const getBaseReturnRoomSql = (nameSql, phoneSql) => Prisma.sql`
       (
         SELECT STRING_AGG(DISTINCT dcg.ma_phong, ', ' ORDER BY dcg.ma_phong)
         FROM dat_coc_giuong dcg
+        JOIN phong p ON p.ma_phong = dcg.ma_phong
         WHERE dcg.ma_pdc = h.ma_pdc
+          AND p.chi_nhanh = ${maCn}
       ),
       ''
     ) AS ma_phong
@@ -87,22 +122,33 @@ const getBaseReturnRoomSql = (nameSql, phoneSql) => Prisma.sql`
 
 export const getVatDungHuHaiList = async (req, res, next) => {
   try {
+    const currentEmployee = await getCurrentEmployee(req)
+
+    if (!currentEmployee?.ma_cn) {
+      return res.status(401).json({
+        message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
+      })
+    }
+
+    const maCn = currentEmployee.ma_cn
     const { nameSql, phoneSql } = await getCustomerColumnSql()
 
     const pendingRows = await prisma.$queryRaw`
-      ${getBaseReturnRoomSql(nameSql, phoneSql)}
+      ${getBaseReturnRoomSql(nameSql, phoneSql, maCn)}
 
       WHERE h.ngay_huy IS NULL
         AND h.ma_hdt IS NOT NULL
         AND h.ghi_nhan_hu_hai = FALSE
+        AND ${buildSameBranchExistsSql(maCn)}
 
       ORDER BY h.ngay_tp DESC, h.ma_tp DESC
     `
 
     const historyRows = await prisma.$queryRaw`
-      ${getBaseReturnRoomSql(nameSql, phoneSql)}
+      ${getBaseReturnRoomSql(nameSql, phoneSql, maCn)}
 
       WHERE h.ghi_nhan_hu_hai = TRUE
+        AND ${buildSameBranchExistsSql(maCn)}
 
       ORDER BY h.ngay_tp DESC, h.ma_tp DESC
     `
@@ -110,6 +156,11 @@ export const getVatDungHuHaiList = async (req, res, next) => {
     res.json({
       pending: pendingRows.map(mapReturnRoomRow),
       history: historyRows.map(mapReturnRoomRow),
+      currentBranch: {
+        ma_cn: maCn,
+        ma_nv: currentEmployee.ma_nv,
+        ten_nv: currentEmployee.ten_nv,
+      },
     })
   } catch (error) {
     next(error)
@@ -126,6 +177,15 @@ export const getVatDungHuHaiDetail = async (req, res, next) => {
       })
     }
 
+    const currentEmployee = await getCurrentEmployee(req)
+
+    if (!currentEmployee?.ma_cn) {
+      return res.status(401).json({
+        message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
+      })
+    }
+
+    const maCn = currentEmployee.ma_cn
     const { nameSql, phoneSql } = await getCustomerColumnSql()
 
     const headerRows = await prisma.$queryRaw`
@@ -148,7 +208,9 @@ export const getVatDungHuHaiDetail = async (req, res, next) => {
           (
             SELECT STRING_AGG(DISTINCT dcg.ma_phong, ', ' ORDER BY dcg.ma_phong)
             FROM dat_coc_giuong dcg
+            JOIN phong p ON p.ma_phong = dcg.ma_phong
             WHERE dcg.ma_pdc = h.ma_pdc
+              AND p.chi_nhanh = ${maCn}
           ),
           ''
         ) AS ma_phong
@@ -156,13 +218,16 @@ export const getVatDungHuHaiDetail = async (req, res, next) => {
       FROM ho_so_tra_phong h
       JOIN khach_hang kh ON kh.ma_kh = h.ma_khach_thue
       LEFT JOIN hop_dong_thue hd ON hd.ma_hdt = h.ma_hdt
+
       WHERE h.ma_tp = ${maTp}
+        AND ${buildSameBranchExistsSql(maCn)}
+
       LIMIT 1
     `
 
     if (headerRows.length === 0) {
       return res.status(404).json({
-        message: 'Không tìm thấy hồ sơ trả phòng.',
+        message: 'Không tìm thấy hồ sơ trả phòng thuộc chi nhánh của bạn.',
       })
     }
 
@@ -188,6 +253,7 @@ export const getVatDungHuHaiDetail = async (req, res, next) => {
        AND vdh.ma_bb = vdbg.ma_bb
 
       WHERE h.ma_tp = ${maTp}
+        AND ${buildSameBranchExistsSql(maCn)}
 
       ORDER BY vd.ten_vd ASC, vd.ma_vd ASC
     `
@@ -205,10 +271,8 @@ export const getVatDungHuHaiDetail = async (req, res, next) => {
       ...header,
       tg_vao: headerRows[0].tg_vao,
 
-      // Nếu HSTP đã ghi nhận nhưng không có dòng nào trong vat_dung_hu_hai
-      // thì hiểu là không có vật dụng hư hại.
       khong_co_vat_dung_hu_hai:
-        Boolean(headerRows[0].ghi_nhan_hu_hai) && !hasDamageRows,
+        normalizeBoolean(headerRows[0].ghi_nhan_hu_hai) && !hasDamageRows,
 
       items: itemRows.map(mapDetailItem),
     })
@@ -229,16 +293,29 @@ export const saveVatDungHuHai = async (req, res, next) => {
       })
     }
 
+    const currentEmployee = await getCurrentEmployee(req)
+
+    if (!currentEmployee?.ma_cn) {
+      return res.status(401).json({
+        message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
+      })
+    }
+
+    const maCn = currentEmployee.ma_cn
+
     await prisma.$transaction(async tx => {
       const hoSoRows = await tx.$queryRaw`
-        SELECT ma_tp, ma_hdt
-        FROM ho_so_tra_phong
-        WHERE ma_tp = ${maTp}
+        SELECT
+          h.ma_tp,
+          h.ma_hdt
+        FROM ho_so_tra_phong h
+        WHERE h.ma_tp = ${maTp}
+          AND ${buildSameBranchExistsSql(maCn)}
         LIMIT 1
       `
 
       if (hoSoRows.length === 0) {
-        const error = new Error('Không tìm thấy hồ sơ trả phòng.')
+        const error = new Error('Không tìm thấy hồ sơ trả phòng thuộc chi nhánh của bạn.')
         error.statusCode = 404
         throw error
       }
@@ -283,6 +360,7 @@ export const saveVatDungHuHai = async (req, res, next) => {
         JOIN bien_ban_ban_giao bb ON bb.ma_hdt = h.ma_hdt
         JOIN vd_bg vdbg ON vdbg.ma_bb = bb.ma_bb
         WHERE h.ma_tp = ${maTp}
+          AND ${buildSameBranchExistsSql(maCn)}
       `
 
       const handedMap = new Map(
@@ -296,7 +374,7 @@ export const saveVatDungHuHai = async (req, res, next) => {
         const key = `${item.ma_bb}__${item.ma_vd}`
         const handedQuantity = handedMap.get(key)
 
-        if (!handedQuantity) {
+        if (handedQuantity === undefined) {
           const error = new Error(
             `Vật dụng ${item.ma_vd} không thuộc biên bản bàn giao của hồ sơ này.`,
           )
