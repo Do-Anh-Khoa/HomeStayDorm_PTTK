@@ -1,98 +1,67 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageTitle from '../../components/common/PageTitle.jsx'
+import api from '../../services/api.js'
 
-// FRONTEND MOCK TRƯỚC
-// Sau này có backend thì thay mấy mảng này bằng api.get(...)
-const MOCK_PENDING_RECORDS = [
-  {
-    ma_tp: 'CO-1029',
-    ma_phong: 'A-204',
-    ten_kh: 'Nguyễn Văn A',
-    cccd: '012345678901',
-    sdt: '0909 123 456',
-    ngay_nhan: '10/10/2025',
-    ngay_tra: '06/06/2026',
-    trang_thai: 'Chưa ghi nhận',
-    vat_dung: [
-      { ma_vd: 'VD001', ten_vd: 'Khăn tắm', so_luong_ban_giao: 4 },
-      { ma_vd: 'VD002', ten_vd: 'Remote TV', so_luong_ban_giao: 1 },
-      { ma_vd: 'VD003', ten_vd: 'Máy sấy tóc', so_luong_ban_giao: 1 },
-      { ma_vd: 'VD004', ten_vd: 'Đèn ngủ', so_luong_ban_giao: 2 },
-    ],
-  },
-  {
-    ma_tp: 'CO-1027',
-    ma_phong: 'C-301',
-    ten_kh: 'Lê Hoàng C',
-    cccd: '012345678903',
-    sdt: '0908 333 222',
-    ngay_nhan: '09/10/2025',
-    ngay_tra: '06/06/2026',
-    trang_thai: 'Chưa ghi nhận',
-    vat_dung: [
-      { ma_vd: 'VD005', ten_vd: 'Chìa khóa phòng', so_luong_ban_giao: 1 },
-      { ma_vd: 'VD006', ten_vd: 'Thẻ ra vào', so_luong_ban_giao: 1 },
-    ],
-  },
-]
+const normalizeText = value => {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+}
 
-const MOCK_HISTORY_RECORDS = [
-  {
-    ma_tp: 'CO-1028',
-    ma_phong: 'B-105',
-    ten_kh: 'Trần Thị B',
-    cccd: '012345678902',
-    sdt: '0912 222 111',
-    ngay_nhan: '10/10/2025',
-    ngay_tra: '06/06/2026',
-    trang_thai: 'Đã ghi nhận',
-    khong_co_hu_hai: false,
-    vat_dung: [
-      { ma_vd: 'VD001', ten_vd: 'Khăn tắm', so_luong_ban_giao: 4, so_luong_hu_hai: 2, ghi_chu: '' },
-      { ma_vd: 'VD002', ten_vd: 'Remote TV', so_luong_ban_giao: 1, so_luong_hu_hai: 1, ghi_chu: '' },
-      { ma_vd: 'VD003', ten_vd: 'Máy sấy tóc', so_luong_ban_giao: 1, so_luong_hu_hai: 0, ghi_chu: '' },
-      { ma_vd: 'VD004', ten_vd: 'Đèn ngủ', so_luong_ban_giao: 2, so_luong_hu_hai: 0, ghi_chu: '' },
-    ],
-  },
-]
+const formatDate = value => {
+  if (!value) return ''
 
-const IconSearch = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-)
+  const date = new Date(value)
 
-const formatRecordForDetail = record => ({
-  ...record,
-  khong_co_hu_hai: record.khong_co_hu_hai || false,
-  vat_dung: record.vat_dung.map(item => ({
-    ...item,
-    so_luong_hu_hai: item.so_luong_hu_hai || 0,
-    ghi_chu: item.ghi_chu || '',
-  })),
-})
+  if (Number.isNaN(date.getTime())) return ''
 
-function StatusBadge({ status }) {
-  const isDone = status === 'Đã ghi nhận'
+  return new Intl.DateTimeFormat('vi-VN').format(date)
+}
+
+const formatMoney = value => {
+  const number = Number(value)
+
+  if (!Number.isFinite(number)) return '0'
+
+  return new Intl.NumberFormat('vi-VN').format(number)
+}
+
+const getErrorMessage = error => {
+  return (
+    error?.response?.data?.message ||
+    error?.message ||
+    'Đã có lỗi xảy ra.'
+  )
+}
+
+function StatusBadge({ type }) {
+  const isDone = type === 'done'
 
   return (
-    <span style={isDone ? S.badgeDone : S.badgePending}>
-      {status}
+    <span style={{ ...S.statusBadge, ...(isDone ? S.statusDone : S.statusPending) }}>
+      {isDone ? 'Đã ghi nhận' : 'Chưa ghi nhận'}
     </span>
   )
 }
 
-function RecordTable({ records, emptyText, actionType, onRecord, onViewDetail }) {
+function EmptyRow({ colSpan, text }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} style={S.emptyCell}>
+        {text}
+      </td>
+    </tr>
+  )
+}
+
+function ReturnRoomTable({
+  rows,
+  type,
+  loading,
+  emptyText,
+  onRecord,
+  onViewDetail,
+}) {
   return (
     <div style={S.tableWrap}>
       <table style={S.table}>
@@ -108,38 +77,28 @@ function RecordTable({ records, emptyText, actionType, onRecord, onViewDetail })
         </thead>
 
         <tbody>
-          {records.length === 0 ? (
-            <tr>
-              <td colSpan="6" style={S.emptyCell}>
-                {emptyText}
-              </td>
-            </tr>
+          {loading ? (
+            <EmptyRow colSpan={6} text="Đang tải dữ liệu..." />
+          ) : rows.length === 0 ? (
+            <EmptyRow colSpan={6} text={emptyText} />
           ) : (
-            records.map(record => (
-              <tr key={record.ma_tp} style={S.tr}>
-                <td style={S.td}>{record.ma_tp}</td>
-                <td style={S.td}>{record.ma_phong}</td>
-                <td style={S.td}>{record.ten_kh}</td>
-                <td style={S.td}>{record.ngay_tra}</td>
+            rows.map(row => (
+              <tr key={row.ma_tp} style={S.tr}>
+                <td style={S.td}>{row.ma_tp}</td>
+                <td style={S.td}>{row.ma_phong || 'Chưa có phòng'}</td>
+                <td style={S.td}>{row.ten_khach_hang || row.ma_khach_thue}</td>
+                <td style={S.td}>{formatDate(row.ngay_tp)}</td>
                 <td style={S.td}>
-                  <StatusBadge status={record.trang_thai} />
+                  <StatusBadge type={type === 'history' ? 'done' : 'pending'} />
                 </td>
                 <td style={{ ...S.td, textAlign: 'center' }}>
-                  {actionType === 'record' ? (
-                    <button
-                      type="button"
-                      style={S.btnSmall}
-                      onClick={() => onRecord(record)}
-                    >
-                      Ghi nhận
+                  {type === 'history' ? (
+                    <button type="button" style={S.btnAction} onClick={() => onViewDetail(row)}>
+                      Xem chi tiết
                     </button>
                   ) : (
-                    <button
-                      type="button"
-                      style={S.btnSmall}
-                      onClick={() => onViewDetail(record)}
-                    >
-                      Xem chi tiết
+                    <button type="button" style={S.btnAction} onClick={() => onRecord(row)}>
+                      Ghi nhận
                     </button>
                   )}
                 </td>
@@ -152,56 +111,406 @@ function RecordTable({ records, emptyText, actionType, onRecord, onViewDetail })
   )
 }
 
-function ListView({
-  keyword,
-  setKeyword,
-  pendingRecords,
-  historyRecords,
-  onSearch,
-  onRecord,
-  onViewDetail,
-}) {
+function SuccessPopup({ onBack }) {
   return (
-    <section>
-      <div style={{ marginBottom: '14px' }}>
-        <PageTitle
-          title="Ghi nhận vật dụng hư hại"
-          description="Quản lý và ghi nhận mọi hư hại được báo cáo trong quá trình trả phòng."
-        />
+    <div style={S.successOverlay}>
+      <div style={S.successBox}>
+        <div style={S.successIcon}>✓</div>
+
+        <h3 style={S.successTitle}>Ghi nhận thành công</h3>
+
+        <p style={S.successText}>
+          Thông tin vật dụng hư hại đã được hệ thống ghi nhận thành công.
+        </p>
+
+        <button type="button" style={S.btnSuccessBack} onClick={onBack}>
+          ← Quay lại danh sách
+        </button>
       </div>
+    </div>
+  )
+}
+
+function DetailView({
+  mode,
+  detail,
+  items,
+  noDamage,
+  saving,
+  showSuccess,
+  onBack,
+  onSuccessBack,
+  onToggleNoDamage,
+  onChangeQuantity,
+  onSave,
+}) {
+  const isHistory = mode === 'history'
+
+  return (
+    <section style={S.page}>
+      <div style={S.breadcrumb}>
+        Chọn hồ sơ trả phòng <span>/</span>{' '}
+        {isHistory ? 'Chi tiết ghi nhận vật dụng hư hại' : 'Ghi nhận vật dụng hư hại'}
+      </div>
+
+      <PageTitle
+        title="Chi tiết ghi nhận vật dụng hư hại"
+        description={
+          isHistory
+            ? 'Xem lại số lượng vật dụng bị hư hỏng hoặc thất thoát đã được lưu.'
+            : 'Kiểm tra và ghi nhận số lượng vật dụng bị hư hỏng hoặc thất thoát trong quá trình khách lưu trú.'
+        }
+      />
+
+      <div style={S.infoCard}>
+        <h3 style={S.infoTitle}>Thông tin trả phòng</h3>
+
+        <div style={S.infoGrid}>
+          <div style={S.infoCol}>
+            <div style={S.infoRow}>
+              <span>Mã trả phòng:</span>
+              <strong>{detail.ma_tp}</strong>
+            </div>
+            <div style={S.infoRow}>
+              <span>Mã phòng:</span>
+              <strong>{detail.ma_phong || 'Chưa có phòng'}</strong>
+            </div>
+            <div style={S.infoRow}>
+              <span>Khách hàng:</span>
+              <strong>{detail.ten_khach_hang || detail.ma_khach_thue}</strong>
+            </div>
+          </div>
+
+          <div style={S.infoCol}>
+            <div style={S.infoRow}>
+              <span>Số điện thoại:</span>
+              <strong>{detail.sdt || 'Chưa có'}</strong>
+            </div>
+            <div style={S.infoRow}>
+              <span>Ngày nhận:</span>
+              <strong>{formatDate(detail.tg_vao)}</strong>
+            </div>
+            <div style={S.infoRow}>
+              <span>Ngày trả:</span>
+              <strong>{formatDate(detail.ngay_tp)}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <label style={S.noDamageLabel}>
+        <input
+          type="checkbox"
+          checked={noDamage}
+          disabled={isHistory}
+          onChange={event => onToggleNoDamage(event.target.checked)}
+        />
+        <span>Không có vật dụng hư hại</span>
+      </label>
+
+      <div style={S.detailTableWrap}>
+        <table style={S.table}>
+          <thead>
+            <tr>
+              <th style={{ ...S.th, width: '70px', textAlign: 'center' }}>STT</th>
+              <th style={S.th}>Tên vật dụng</th>
+              <th style={{ ...S.th, textAlign: 'center' }}>SL bàn giao</th>
+              <th style={S.th}>Tình trạng</th>
+              <th style={{ ...S.th, textAlign: 'center' }}>SL hư hại</th>
+              <th style={{ ...S.th, textAlign: 'right' }}>Giá bồi thường</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {items.length === 0 ? (
+              <EmptyRow colSpan={6} text="Không có vật dụng bàn giao." />
+            ) : (
+              items.map((item, index) => (
+                <tr key={`${item.ma_bb}-${item.ma_vd}`} style={S.tr}>
+                  <td style={{ ...S.td, textAlign: 'center' }}>{index + 1}</td>
+                  <td style={S.td}>{item.ten_vd}</td>
+                  <td style={{ ...S.td, textAlign: 'center' }}>{item.so_luong_ban_giao}</td>
+                  <td style={S.td}>{item.tinh_trang || 'Không ghi nhận'}</td>
+                  <td style={{ ...S.td, textAlign: 'center' }}>
+                    <div style={S.qtyControl}>
+                      <button
+                        type="button"
+                        style={S.qtyButton}
+                        disabled={noDamage || isHistory || item.sl_hu_hai <= 0}
+                        onClick={() => onChangeQuantity(index, item.sl_hu_hai - 1)}
+                      >
+                        -
+                      </button>
+                      <input
+                        style={S.qtyInput}
+                        type="text"
+                        inputMode="numeric"
+                        value={item.sl_hu_hai}
+                        disabled={noDamage || isHistory}
+                        onChange={event => onChangeQuantity(index, event.target.value)}
+                        onFocus={event => event.target.select()}
+                      />
+                      <button
+                        type="button"
+                        style={S.qtyButton}
+                        disabled={noDamage || isHistory || item.sl_hu_hai >= item.so_luong_ban_giao}
+                        onClick={() => onChangeQuantity(index, item.sl_hu_hai + 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </td>
+                  <td style={{ ...S.td, textAlign: 'right' }}>
+                    {formatMoney(item.gia_boi_thuong)}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={S.detailFooter}>
+        <button type="button" style={S.btnBack} onClick={onBack}>
+          Hủy
+        </button>
+
+        {!isHistory && (
+          <button type="button" style={S.btnSave} disabled={saving} onClick={onSave}>
+            {saving ? 'Đang lưu...' : 'Lưu ghi nhận'}
+          </button>
+        )}
+      </div>
+
+      {showSuccess && (
+        <SuccessPopup onBack={onSuccessBack} />
+      )}
+    </section>
+  )
+}
+
+export default function VatDungHuHaiPage() {
+  const [view, setView] = useState('list')
+  const [detailMode, setDetailMode] = useState('record')
+
+  const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
+  const [pendingRows, setPendingRows] = useState([])
+  const [historyRows, setHistoryRows] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const [detail, setDetail] = useState(null)
+  const [items, setItems] = useState([])
+  const [noDamage, setNoDamage] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+
+  const fetchVatDungHuHai = async () => {
+    setLoading(true)
+
+    try {
+      const response = await api.get('/vat-dung-hu-hai')
+      const data = response.data?.data || response.data || {}
+
+      setPendingRows(Array.isArray(data.pending) ? data.pending : [])
+      setHistoryRows(Array.isArray(data.history) ? data.history : [])
+    } catch (error) {
+      console.error(error)
+      window.alert(getErrorMessage(error))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchVatDungHuHai()
+  }, [])
+
+  const filterRows = rows => {
+    const keyword = normalizeText(search)
+
+    if (!keyword) {
+      return rows
+    }
+
+    return rows.filter(row => {
+      return normalizeText(row.ma_phong).includes(keyword)
+    })
+  }
+
+  const filteredPendingRows = useMemo(
+    () => filterRows(pendingRows),
+    [pendingRows, appliedSearch],
+  )
+
+  const filteredHistoryRows = useMemo(
+    () => filterRows(historyRows),
+    [historyRows, appliedSearch],
+  )
+  const handleSearch = () => {
+    setAppliedSearch(search)
+  }
+  const openDetail = async (row, mode) => {
+    try {
+      const response = await api.get(`/vat-dung-hu-hai/${row.ma_tp}`)
+      const data = response.data || {}
+
+      setDetail(data)
+      setItems(
+        Array.isArray(data.items)
+          ? data.items.map(item => ({
+              ...item,
+              sl_hu_hai: Number(item.sl_hu_hai || 0),
+              so_luong_ban_giao: Number(item.so_luong_ban_giao || 0),
+              gia_boi_thuong: Number(item.gia_boi_thuong || 0),
+            }))
+          : [],
+      )
+      setNoDamage(Boolean(data.khong_co_vat_dung_hu_hai))
+      setDetailMode(mode)
+      setShowSuccess(false)
+      setView('detail')
+    } catch (error) {
+      console.error(error)
+      window.alert(getErrorMessage(error))
+    }
+  }
+
+  const resetDetailState = () => {
+    setView('list')
+    setDetail(null)
+    setItems([])
+    setNoDamage(false)
+    setShowSuccess(false)
+  }
+
+  const handleToggleNoDamage = checked => {
+    setNoDamage(checked)
+
+    if (checked) {
+      setItems(current => current.map(item => ({
+        ...item,
+        sl_hu_hai: 0,
+      })))
+    }
+  }
+
+  const handleChangeQuantity = (index, value) => {
+    setItems(current => {
+      const next = [...current]
+      const item = next[index]
+      const max = Number(item.so_luong_ban_giao || 0)
+      let quantity = Number(value)
+
+      if (!Number.isFinite(quantity)) {
+        quantity = 0
+      }
+
+      quantity = Math.max(0, Math.min(max, quantity))
+
+      next[index] = {
+        ...item,
+        sl_hu_hai: quantity,
+      }
+
+      return next
+    })
+  }
+
+  const handleSave = async () => {
+    if (!detail) return
+
+    const damagedItems = items.filter(item => Number(item.sl_hu_hai) > 0)
+
+    if (!noDamage && damagedItems.length === 0) {
+      window.alert('Vui lòng nhập ít nhất một vật dụng có số lượng hư hại lớn hơn 0 hoặc chọn không có vật dụng hư hại.')
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      await api.post(`/vat-dung-hu-hai/${detail.ma_tp}`, {
+        khong_co_vat_dung_hu_hai: noDamage,
+        items: damagedItems.map(item => ({
+          ma_vd: item.ma_vd,
+          ma_bb: item.ma_bb,
+          sl_hu_hai: Number(item.sl_hu_hai),
+        })),
+      })
+
+      setShowSuccess(true)
+    } catch (error) {
+      console.error(error)
+      window.alert(getErrorMessage(error))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSuccessBack = async () => {
+    resetDetailState()
+    await fetchVatDungHuHai()
+  }
+
+  if (view === 'detail' && detail) {
+    return (
+      <DetailView
+        mode={detailMode}
+        detail={detail}
+        items={items}
+        noDamage={noDamage}
+        saving={saving}
+        showSuccess={showSuccess}
+        onBack={resetDetailState}
+        onSuccessBack={handleSuccessBack}
+        onToggleNoDamage={handleToggleNoDamage}
+        onChangeQuantity={handleChangeQuantity}
+        onSave={handleSave}
+      />
+    )
+  }
+
+  return (
+    <section style={S.page}>
+      <PageTitle
+        title="Ghi nhận vật dụng hư hại"
+        description="Quản lý và ghi nhận mọi hư hại được báo cáo trong quá trình trả phòng."
+      />
 
       <div style={S.card}>
         <div style={S.searchRow}>
           <div style={S.searchInputWrap}>
-            <span style={S.searchIcon}>
-              <IconSearch />
-            </span>
-
+            <span style={S.searchIcon}>⌕</span>
             <input
-              style={S.inputSearch}
-              placeholder="Nhập CCCD hoặc mã phòng"
-              value={keyword}
-              onChange={event => setKeyword(event.target.value)}
+              style={S.searchInput}
+              value={search}
+              onChange={event => setSearch(event.target.value)}
               onKeyDown={event => {
-                if (event.key === 'Enter') onSearch()
-              }}
+              if (event.key === 'Enter') {
+                handleSearch()
+            }
+            }}
+            placeholder="Nhập mã phòng để tìm kiếm"
             />
           </div>
 
-          <button type="button" style={S.btnSearch} onClick={onSearch}>
+          <button type="button" style={S.btnSearch} onClick={handleSearch}>
             Tìm kiếm
           </button>
         </div>
 
-        <RecordTable
-          records={pendingRecords}
-          emptyText="Không có hồ sơ trả phòng nào cần ghi nhận."
-          actionType="record"
-          onRecord={onRecord}
+        <ReturnRoomTable
+          rows={filteredPendingRows}
+          type="pending"
+          loading={loading}
+          emptyText="Không có hồ sơ trả phòng cần ghi nhận."
+          onRecord={row => openDetail(row, 'record')}
+          onViewDetail={row => openDetail(row, 'history')}
         />
       </div>
 
-      <div style={{ marginTop: '22px', marginBottom: '12px' }}>
+      <div style={S.historyHeader}>
         <PageTitle
           title="Lịch sử ghi nhận vật dụng hư hại"
           description="Xem chi tiết các ghi nhận mọi hư hại đã được lưu."
@@ -209,715 +518,362 @@ function ListView({
       </div>
 
       <div style={S.card}>
-        <RecordTable
-          records={historyRecords}
+        <ReturnRoomTable
+          rows={filteredHistoryRows}
+          type="history"
+          loading={loading}
           emptyText="Chưa có lịch sử ghi nhận vật dụng hư hại."
-          actionType="view"
-          onViewDetail={onViewDetail}
+          onRecord={row => openDetail(row, 'record')}
+          onViewDetail={row => openDetail(row, 'history')}
         />
       </div>
     </section>
-  )
-}
-
-function ReturnInfo({ record }) {
-  return (
-    <div style={S.infoCard}>
-      <h3 style={S.sectionTitle}>Thông tin trả phòng</h3>
-
-      <div style={S.infoDivider} />
-
-      <div style={S.infoGrid}>
-        <div style={S.infoCol}>
-          <InfoRow label="Mã trả phòng:" value={record.ma_tp} />
-          <InfoRow label="Mã phòng:" value={record.ma_phong} />
-          <InfoRow label="Khách hàng:" value={record.ten_kh} />
-        </div>
-
-        <div style={S.infoCol}>
-          <InfoRow label="Số điện thoại:" value={record.sdt} />
-          <InfoRow label="Ngày nhận:" value={record.ngay_nhan} />
-          <InfoRow label="Ngày trả:" value={record.ngay_tra} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div style={S.infoRow}>
-      <span style={S.infoLabel}>{label}</span>
-      <strong style={S.infoValue}>{value}</strong>
-    </div>
-  )
-}
-
-function DamageCounter({ value, disabled, onDecrease, onIncrease }) {
-  return (
-    <div style={disabled ? S.counterDisabled : S.counter}>
-      <button
-        type="button"
-        style={S.counterButton}
-        onClick={onDecrease}
-        disabled={disabled}
-      >
-        −
-      </button>
-
-      <span style={S.counterValue}>{value}</span>
-
-      <button
-        type="button"
-        style={S.counterButton}
-        onClick={onIncrease}
-        disabled={disabled}
-      >
-        +
-      </button>
-    </div>
-  )
-}
-
-function DetailView({ mode, record, onCancel, onSave }) {
-  const isViewOnly = mode === 'view'
-  const [items, setItems] = useState(record.vat_dung)
-  const [noDamage, setNoDamage] = useState(record.khong_co_hu_hai || false)
-  const [submitting, setSubmitting] = useState(false)
-
-  const hasInvalidQuantity = useMemo(() => {
-    return items.some(item => item.so_luong_hu_hai > item.so_luong_ban_giao)
-  }, [items])
-
-  const hasAnyDamage = useMemo(() => {
-    return items.some(item => item.so_luong_hu_hai > 0)
-  }, [items])
-
-  const canSave = !isViewOnly && !hasInvalidQuantity && (noDamage || hasAnyDamage)
-
-  const changeDamageQuantity = (maVd, type) => {
-    if (isViewOnly || noDamage) return
-
-    setItems(current =>
-      current.map(item => {
-        if (item.ma_vd !== maVd) return item
-
-        const nextValue = type === 'increase'
-          ? item.so_luong_hu_hai + 1
-          : Math.max(0, item.so_luong_hu_hai - 1)
-
-        return {
-          ...item,
-          so_luong_hu_hai: nextValue,
-        }
-      })
-    )
-  }
-
-  const changeNote = (maVd, note) => {
-    if (isViewOnly || noDamage) return
-
-    setItems(current =>
-      current.map(item => {
-        if (item.ma_vd !== maVd) return item
-
-        return {
-          ...item,
-          ghi_chu: note,
-        }
-      })
-    )
-  }
-
-  const handleToggleNoDamage = event => {
-    if (isViewOnly) return
-
-    const checked = event.target.checked
-
-    setNoDamage(checked)
-
-    if (checked) {
-      setItems(current =>
-        current.map(item => ({
-          ...item,
-          so_luong_hu_hai: 0,
-          ghi_chu: '',
-        }))
-      )
-    }
-  }
-
-  const handleSave = async () => {
-    if (!canSave) return
-
-    setSubmitting(true)
-
-    try {
-      await onSave({
-        ...record,
-        khong_co_hu_hai: noDamage,
-        vat_dung: items,
-        trang_thai: 'Đã ghi nhận',
-      })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <section style={{ paddingBottom: isViewOnly ? '0' : '80px' }}>
-      <div style={S.breadcrumb}>
-        {isViewOnly ? 'Xem chi tiết ghi nhận' : 'Chọn hồ sơ trả phòng'}
-        <span>/</span>
-        Ghi nhận vật dụng hư hại
-      </div>
-
-      <div style={{ marginBottom: '14px' }}>
-        <PageTitle
-          title={isViewOnly ? 'Chi tiết ghi nhận vật dụng hư hại' : 'Chi tiết ghi nhận vật dụng hư hại'}
-          description="Kiểm tra và ghi nhận số lượng vật dụng bị hư hỏng hoặc thất thoát trong quá trình khách lưu trú."
-        />
-      </div>
-
-      <ReturnInfo record={record} />
-
-      <label style={S.noDamageRow}>
-        <input
-          type="checkbox"
-          checked={noDamage}
-          onChange={handleToggleNoDamage}
-          disabled={isViewOnly}
-        />
-        <span>Không có vật dụng hư hại</span>
-      </label>
-
-      <div style={S.damageTableWrap}>
-        <table style={S.table}>
-          <thead>
-            <tr>
-              <th style={{ ...S.th, width: '70px', textAlign: 'center' }}>STT</th>
-              <th style={S.th}>Tên vật dụng</th>
-              <th style={{ ...S.th, textAlign: 'center' }}>SL bàn giao</th>
-              <th style={{ ...S.th, textAlign: 'center' }}>SL hư hại</th>
-              <th style={S.th}>Ghi chú</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {items.map((item, index) => {
-              const invalid = item.so_luong_hu_hai > item.so_luong_ban_giao
-              const rowDisabled = noDamage || isViewOnly
-
-              return (
-                <tr key={item.ma_vd} style={S.tr}>
-                  <td style={{ ...S.td, textAlign: 'center' }}>{index + 1}</td>
-                  <td style={S.td}>{item.ten_vd}</td>
-                  <td style={{ ...S.td, textAlign: 'center' }}>{item.so_luong_ban_giao}</td>
-                  <td style={{ ...S.td, textAlign: 'center' }}>
-                    <div style={S.counterCell}>
-                      <DamageCounter
-                        value={item.so_luong_hu_hai}
-                        disabled={rowDisabled}
-                        onDecrease={() => changeDamageQuantity(item.ma_vd, 'decrease')}
-                        onIncrease={() => changeDamageQuantity(item.ma_vd, 'increase')}
-                      />
-
-                      {invalid && (
-                        <span style={S.quantityError}>
-                          Số lượng hư hại không hợp lệ
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td style={S.td}>
-                    <input
-                      style={rowDisabled ? S.noteInputDisabled : S.noteInput}
-                      placeholder="Thêm ghi chú..."
-                      value={item.ghi_chu}
-                      onChange={event => changeNote(item.ma_vd, event.target.value)}
-                      disabled={rowDisabled}
-                      readOnly={isViewOnly}
-                    />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {isViewOnly ? (
-        <div style={S.viewFooter}>
-          <button type="button" style={S.btnPrimary} onClick={onCancel}>
-            Quay lại
-          </button>
-        </div>
-      ) : (
-        <div style={S.bottomBar}>
-          <button
-            type="button"
-            style={S.btnSecondary}
-            onClick={onCancel}
-            disabled={submitting}
-          >
-            Hủy
-          </button>
-
-          <button
-            type="button"
-            style={canSave ? S.btnPrimary : S.btnPrimaryDisabled}
-            onClick={handleSave}
-            disabled={!canSave || submitting}
-          >
-            {submitting ? 'Đang lưu…' : 'Lưu ghi nhận'}
-          </button>
-        </div>
-      )}
-    </section>
-  )
-}
-
-export default function VatDungHuHaiPage() {
-  const [keyword, setKeyword] = useState('')
-  const [pendingRecords, setPendingRecords] = useState([])
-  const [historyRecords, setHistoryRecords] = useState([])
-  const [view, setView] = useState('list')
-  const [selectedRecord, setSelectedRecord] = useState(null)
-  const [toast, setToast] = useState(null)
-
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
-  }
-
-  useEffect(() => {
-    setPendingRecords(MOCK_PENDING_RECORDS)
-    setHistoryRecords(MOCK_HISTORY_RECORDS)
-  }, [])
-
-  const handleSearch = () => {
-    const q = keyword.trim().toLowerCase()
-
-    if (!q) {
-      setPendingRecords(MOCK_PENDING_RECORDS)
-      return
-    }
-
-    const result = MOCK_PENDING_RECORDS.filter(record => {
-      return (
-        record.cccd.toLowerCase().includes(q) ||
-        record.ma_phong.toLowerCase().includes(q)
-      )
-    })
-
-    setPendingRecords(result)
-  }
-
-  const handleRecord = record => {
-    setSelectedRecord(formatRecordForDetail(record))
-    setView('record')
-  }
-
-  const handleViewDetail = record => {
-    setSelectedRecord(formatRecordForDetail(record))
-    setView('view')
-  }
-
-  const handleSaveRecord = async savedRecord => {
-    // FRONTEND MOCK: backend sau này sẽ lưu xuống bảng vat_dung_hu_hai
-    setPendingRecords(current => current.filter(item => item.ma_tp !== savedRecord.ma_tp))
-
-    setHistoryRecords(current => [
-      {
-        ...savedRecord,
-        trang_thai: 'Đã ghi nhận',
-      },
-      ...current,
-    ])
-
-    showToast('Lưu ghi nhận vật dụng hư hại thành công.')
-
-    setSelectedRecord(null)
-    setView('list')
-  }
-
-  const goBackToList = () => {
-    setSelectedRecord(null)
-    setView('list')
-  }
-
-  if ((view === 'record' || view === 'view') && selectedRecord) {
-    return (
-      <>
-        <DetailView
-          mode={view === 'view' ? 'view' : 'record'}
-          record={selectedRecord}
-          onCancel={goBackToList}
-          onSave={handleSaveRecord}
-        />
-
-        {toast && (
-          <div style={{ ...S.toast, ...(toast.type === 'error' ? S.toastError : S.toastSuccess) }}>
-            {toast.message}
-          </div>
-        )}
-      </>
-    )
-  }
-
-  return (
-    <>
-      <ListView
-        keyword={keyword}
-        setKeyword={setKeyword}
-        pendingRecords={pendingRecords}
-        historyRecords={historyRecords}
-        onSearch={handleSearch}
-        onRecord={handleRecord}
-        onViewDetail={handleViewDetail}
-      />
-
-      {toast && (
-        <div style={{ ...S.toast, ...(toast.type === 'error' ? S.toastError : S.toastSuccess) }}>
-          {toast.message}
-        </div>
-      )}
-    </>
   )
 }
 
 const S = {
-  card: {
-    backgroundColor: '#fff',
-    border: '1px solid #dde3d8',
-    borderRadius: '8px',
-    padding: '16px',
+  page: {
+    padding: '0',
   },
+
+  breadcrumb: {
+    marginBottom: '8px',
+    color: '#6b7560',
+    fontSize: '12px',
+    fontWeight: 700,
+  },
+
+  card: {
+    border: '1px solid #d9ded4',
+    borderRadius: '8px',
+    padding: '20px',
+    backgroundColor: '#fff',
+    marginTop: '16px',
+    marginBottom: '24px',
+  },
+
   searchRow: {
     display: 'flex',
-    gap: '12px',
-    marginBottom: '16px',
+    gap: '14px',
+    marginBottom: '20px',
   },
+
   searchInputWrap: {
     position: 'relative',
     flex: 1,
   },
+
   searchIcon: {
     position: 'absolute',
-    left: '13px',
+    left: '16px',
     top: '50%',
     transform: 'translateY(-50%)',
     color: '#6b7560',
-    display: 'inline-flex',
+    fontSize: '26px',
+    lineHeight: 1,
   },
-  inputSearch: {
+
+  searchInput: {
     width: '100%',
-    height: '42px',
+    height: '54px',
     boxSizing: 'border-box',
-    padding: '10px 14px 10px 40px',
+    padding: '0 16px 0 52px',
     border: '1.5px solid #cfd6c9',
     borderRadius: '4px',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    color: '#1a1f14',
-    outline: 'none',
     backgroundColor: '#fff',
+    color: '#1a1f14',
+    fontFamily: 'inherit',
+    fontSize: '16px',
+    outline: 'none',
   },
+
   btnSearch: {
-    width: '104px',
-    height: '42px',
-    backgroundColor: '#3b4f27',
-    color: '#fff',
+    width: '130px',
+    height: '54px',
     border: 'none',
     borderRadius: '4px',
-    fontWeight: 700,
-    fontSize: '14px',
-    cursor: 'pointer',
+    backgroundColor: '#3b4f27',
+    color: '#fff',
     fontFamily: 'inherit',
+    fontSize: '16px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
+
   tableWrap: {
+    maxHeight: '252px',
+    overflowY: 'auto',
+    overflowX: 'hidden',
     border: '1px solid #dde3d8',
     borderRadius: '4px',
-    overflow: 'hidden',
     backgroundColor: '#fff',
   },
-  damageTableWrap: {
-    border: '1px solid #dde3d8',
-    borderRadius: '4px',
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    marginTop: '14px',
-  },
+
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '14px',
   },
+
   th: {
-    padding: '13px 18px',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1,
+    padding: '15px 22px',
+    backgroundColor: '#f8f9f7',
+    color: '#626d56',
     textAlign: 'left',
-    backgroundColor: '#f5f6f3',
-    color: '#6b7560',
-    fontWeight: 700,
-    fontSize: '12px',
+    fontSize: '13px',
+    fontWeight: 800,
     borderBottom: '1px solid #dde3d8',
   },
+
   tr: {
     borderBottom: '1px solid #eef0eb',
   },
+
   td: {
-    padding: '13px 18px',
-    color: '#1a1f14',
+    padding: '14px 22px',
+    color: '#11160f',
+    fontSize: '15px',
     verticalAlign: 'middle',
   },
+
   emptyCell: {
-    padding: '28px',
-    color: '#8b9285',
+    padding: '28px 24px',
+    color: '#7a8372',
     textAlign: 'center',
-    fontSize: '14px',
+    fontSize: '15px',
   },
-  btnSmall: {
-    minWidth: '78px',
-    height: '30px',
-    padding: '0 14px',
-    backgroundColor: '#3b4f27',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '5px',
-    fontWeight: 700,
-    fontSize: '12px',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-  },
-  badgePending: {
+
+  statusBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: '86px',
-    padding: '4px 10px',
+    minWidth: '96px',
+    padding: '6px 12px',
     borderRadius: '999px',
-    backgroundColor: '#eef0eb',
-    color: '#6b7560',
-    fontSize: '12px',
-    fontWeight: 700,
-  },
-  badgeDone: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: '86px',
-    padding: '4px 10px',
-    borderRadius: '999px',
-    backgroundColor: '#dcecc4',
-    color: '#3b4f27',
-    fontSize: '12px',
-    fontWeight: 700,
-  },
-  breadcrumb: {
-    display: 'flex',
-    gap: '8px',
-    alignItems: 'center',
-    color: '#6b7560',
     fontSize: '13px',
-    marginBottom: '6px',
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    border: '1px solid #cfd6c9',
-    borderRadius: '8px',
-    padding: '20px 24px',
-  },
-  sectionTitle: {
-    margin: '0',
-    color: '#1a1f14',
-    fontSize: '22px',
     fontWeight: 800,
   },
-  infoDivider: {
-    borderTop: '1px solid #dde3d8',
-    margin: '14px 0 18px',
+
+  statusPending: {
+    backgroundColor: '#f0f2ee',
+    color: '#64705b',
   },
+
+  statusDone: {
+    backgroundColor: '#dceec7',
+    color: '#3d561f',
+  },
+
+  btnAction: {
+    minWidth: '96px',
+    height: '38px',
+    padding: '0 16px',
+    border: 'none',
+    borderRadius: '6px',
+    backgroundColor: '#3b4f27',
+    color: '#fff',
+    fontFamily: 'inherit',
+    fontSize: '14px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+
+  historyHeader: {
+    marginTop: '24px',
+  },
+
+  infoCard: {
+    border: '1px solid #d9ded4',
+    borderRadius: '6px',
+    padding: '16px',
+    backgroundColor: '#fff',
+    marginTop: '14px',
+    marginBottom: '8px',
+  },
+
+  infoTitle: {
+    margin: '0 0 12px',
+    paddingBottom: '8px',
+    borderBottom: '1px solid #eef0eb',
+    color: '#1f2a1d',
+    fontSize: '18px',
+    fontWeight: 800,
+  },
+
   infoGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '48px',
+    gap: '24px',
   },
+
   infoCol: {
     display: 'grid',
-    gap: '12px',
+    gap: '9px',
   },
+
   infoRow: {
     display: 'grid',
-    gridTemplateColumns: '120px 1fr',
+    gridTemplateColumns: '110px 1fr',
     gap: '14px',
-    alignItems: 'center',
-  },
-  infoLabel: {
-    color: '#6b7560',
+    color: '#4e574a',
     fontSize: '13px',
-    fontWeight: 700,
   },
-  infoValue: {
-    color: '#1a1f14',
-    fontSize: '13px',
-    fontWeight: 800,
-  },
-  noDamageRow: {
+
+  noDamageLabel: {
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'flex-end',
+    alignItems: 'center',
     gap: '8px',
-    color: '#1a1f14',
+    margin: '8px 0 8px',
+    color: '#4e574a',
     fontSize: '13px',
-    fontWeight: 600,
-    marginTop: '12px',
-  },
-  counterCell: {
-    display: 'inline-flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  counter: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: '58px',
-    height: '28px',
-    border: '1px solid #cfd6c9',
-    borderRadius: '5px',
-    backgroundColor: '#fff',
-  },
-  counterDisabled: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: '58px',
-    height: '28px',
-    border: '1px solid #d6d8d2',
-    borderRadius: '5px',
-    backgroundColor: '#d9dbd8',
-  },
-  counterButton: {
-    width: '20px',
-    height: '26px',
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: '#1a1f14',
-    cursor: 'pointer',
-    fontWeight: 800,
-    fontFamily: 'inherit',
-  },
-  counterValue: {
-    minWidth: '18px',
-    textAlign: 'center',
-    color: '#1a1f14',
     fontWeight: 700,
   },
-  quantityError: {
-    maxWidth: '90px',
-    color: '#e02424',
-    fontSize: '11px',
-    lineHeight: 1.2,
-    textAlign: 'center',
-  },
-  noteInput: {
-    width: '100%',
-    height: '34px',
-    boxSizing: 'border-box',
-    padding: '8px 12px',
-    border: '1.5px solid #cfd6c9',
-    borderRadius: '5px',
-    fontSize: '13px',
-    fontFamily: 'inherit',
-    outline: 'none',
+
+  detailTableWrap: {
+    border: '1px solid #dde3d8',
+    borderRadius: '4px',
+    overflow: 'hidden',
     backgroundColor: '#fff',
-    color: '#1a1f14',
   },
-  noteInputDisabled: {
-    width: '100%',
+
+  qtyControl: {
+    width: '120px',
     height: '34px',
-    boxSizing: 'border-box',
-    padding: '8px 12px',
-    border: '1.5px solid #d6d8d2',
-    borderRadius: '5px',
-    fontSize: '13px',
-    fontFamily: 'inherit',
-    outline: 'none',
-    backgroundColor: '#cfd1cd',
-    color: '#6b7560',
-    cursor: 'not-allowed',
-  },
-  bottomBar: {
-    position: 'fixed',
-    left: '280px',
-    right: 0,
-    bottom: 0,
-    minHeight: '72px',
-    display: 'flex',
-    justifyContent: 'flex-end',
+    margin: '0 auto',
+    display: 'grid',
+    gridTemplateColumns: '34px 52px 34px',
     alignItems: 'center',
-    gap: '12px',
-    padding: '0 24px',
-    borderTop: '1px solid #dde3d8',
+    border: '1px solid #d6dccf',
+    borderRadius: '6px',
+    overflow: 'hidden',
     backgroundColor: '#fff',
-    zIndex: 50,
   },
-  viewFooter: {
+
+  qtyButton: {
+    width: '34px',
+    height: '34px',
+    padding: 0,
+    border: 'none',
+    backgroundColor: '#fff',
+    color: '#3b4f27',
+    fontFamily: 'inherit',
+    fontSize: '17px',
+    fontWeight: 900,
+    lineHeight: '34px',
+    textAlign: 'center',
+    cursor: 'pointer',
+  },
+
+  qtyInput: {
+    width: '52px',
+    height: '34px',
+    padding: 0,
+    margin: 0,
+    border: 'none',
+    borderLeft: '1px solid #d6dccf',
+    borderRight: '1px solid #d6dccf',
+    backgroundColor: '#fff',
+    color: '#11160f',
+    textAlign: 'center',
+    fontFamily: 'inherit',
+    fontSize: '15px',
+    fontWeight: 700,
+    lineHeight: '34px',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+
+  detailFooter: {
     display: 'flex',
     justifyContent: 'flex-end',
+    gap: '10px',
     marginTop: '16px',
   },
-  btnSecondary: {
-    padding: '9px 20px',
+
+  btnBack: {
+    width: '80px',
+    height: '38px',
+    border: '1px solid #c9cfc3',
+    borderRadius: '4px',
     backgroundColor: '#fff',
     color: '#1a1f14',
-    border: '1.5px solid #cfd6c9',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
     fontFamily: 'inherit',
+    fontWeight: 700,
+    cursor: 'pointer',
   },
-  btnPrimary: {
-    padding: '10px 22px',
+
+  btnSave: {
+    width: '130px',
+    height: '38px',
+    border: 'none',
+    borderRadius: '4px',
     backgroundColor: '#3b4f27',
     color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 700,
+    fontFamily: 'inherit',
+    fontWeight: 800,
     cursor: 'pointer',
-    fontFamily: 'inherit',
   },
-  btnPrimaryDisabled: {
-    padding: '10px 22px',
-    backgroundColor: '#d9dbd8',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 700,
-    cursor: 'not-allowed',
-    fontFamily: 'inherit',
-  },
-  toast: {
+
+  successOverlay: {
     position: 'fixed',
-    top: '90px',
-    right: '24px',
-    padding: '12px 20px',
+    inset: 0,
+    zIndex: 1200,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(30, 35, 28, 0.28)',
+  },
+
+  successBox: {
+    width: '310px',
     borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: 600,
-    zIndex: 2000,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+    backgroundColor: '#fff',
+    boxShadow: '0 18px 60px rgba(0,0,0,0.22)',
+    padding: '28px 22px 22px',
+    textAlign: 'center',
   },
-  toastSuccess: {
-    backgroundColor: '#2e7d32',
-    color: '#fff',
+
+  successIcon: {
+    width: '48px',
+    height: '48px',
+    margin: '0 auto 14px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d9f9e3',
+    color: '#22b65c',
+    fontSize: '28px',
+    fontWeight: 800,
   },
-  toastError: {
-    backgroundColor: '#c0392b',
+
+  successTitle: {
+    margin: '0 0 8px',
+    color: '#151915',
+    fontSize: '15px',
+    fontWeight: 900,
+  },
+
+  successText: {
+    margin: '0 0 18px',
+    color: '#4d554a',
+    fontSize: '12px',
+    lineHeight: 1.5,
+  },
+
+  btnSuccessBack: {
+    width: '100%',
+    height: '42px',
+    border: 'none',
+    borderRadius: '7px',
+    backgroundColor: '#3b4f27',
     color: '#fff',
+    fontFamily: 'inherit',
+    fontSize: '13px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
 }
