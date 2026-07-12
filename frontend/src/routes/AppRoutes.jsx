@@ -33,7 +33,10 @@ import CapNhatPhieuThuPage from '../pages/quanly/CapNhatPhieuThuPage.jsx'
 import BoiThuongPage from '../pages/quanly/BoiThuongPage.jsx'
 
 import DashboardKeToan from '../pages/ketoan/DashboardKeToan.jsx'
-import PhieuThuPage from '../pages/ketoan/PhieuThuPage.jsx'
+import PhieuThuBoiThuongPage from '../pages/ketoan/PhieuThuBoiThuongPage.jsx'
+import PhieuThuHopDongPage from '../pages/ketoan/PhieuThuHopDongPage.jsx'
+import PhieuThuTraPhongPage from '../pages/ketoan/PhieuThuTraPhongPage.jsx'
+import PhieuThuDatCocPage from '../pages/ketoan/PhieuThuDatCocPage.jsx'
 import DichVuHangThangPage from '../pages/ketoan/DichVuHangThangPage.jsx'
 import XacNhanThanhToanPage from '../pages/ketoan/XacNhanThanhToanPage.jsx'
 
@@ -178,7 +181,10 @@ export default function AppRoutes() {
         }
       >
         <Route path="/ke-toan" element={<DashboardKeToan />} />
-        <Route path="/ke-toan/phieu-thu" element={<PhieuThuPage />} />
+        <Route path="/ke-toan/phieu-thu-dat-coc" element={<PhieuThuDatCocPage />} />
+        <Route path="/ke-toan/phieu-thu-hop-dong" element={<PhieuThuHopDongPage />} />
+        <Route path="/ke-toan/phieu-thu-tra-phong" element={<PhieuThuTraPhongPage />} />
+        <Route path="/ke-toan/phieu-thu-boi-thuong" element={<PhieuThuBoiThuongPage />} />
         <Route path="/ke-toan/dich-vu-hang-thang" element={<DichVuHangThangPage />} />
         <Route path="/ke-toan/xac-nhan-thanh-toan" element={<XacNhanThanhToanPage />} />
       </Route>
