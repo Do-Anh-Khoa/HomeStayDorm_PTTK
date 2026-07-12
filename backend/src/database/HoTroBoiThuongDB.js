@@ -1,6 +1,4 @@
-// backend/src/database/HoTroBoiThuongDB.js
 // Gom 3 lớp DB nhỏ (VatDungDB, KhachHangDB, NhanVienDB) trong 1 file cho gọn.
-// Nếu project đã có sẵn các file DB này riêng lẻ thì dùng lại, khỏi cần file này.
 import prisma from '../config/prisma.js'
 
 export class VatDungDB {

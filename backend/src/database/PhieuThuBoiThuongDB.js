@@ -1,9 +1,7 @@
-// backend/src/database/PhieuThuBoiThuongDB.js
 import prisma from '../config/prisma.js'
 
 /**
  * PhieuThuBoiThuongDB — tương ứng lớp PhieuThuBoiThuongDB trong class diagram.
- * Dùng prisma.$queryRaw cho bảng pt_boi_thuong.
  */
 class PhieuThuBoiThuongDB {
   // KiemTraTonTaiTheoBT(maBT): boolean — biên bản này đã có phiếu thu chưa
@@ -15,8 +13,7 @@ class PhieuThuBoiThuongDB {
   }
 
   // ThemPTBT({ maBT, tongTien, nvKeToan }): PhieuThuBoiThuong — tạo mới
-  // trạng thái mặc định "Chưa thanh toán", ngày lập = hiện tại,
-  // nv_cap_nhat = nv_ke_toan lúc tạo.
+  // trạng thái mặc định "Chưa thanh toán"
   static async ThemPTBT({ maBT, tongTien, nvKeToan }) {
   const rows = await prisma.$queryRaw`
     INSERT INTO pt_boi_thuong

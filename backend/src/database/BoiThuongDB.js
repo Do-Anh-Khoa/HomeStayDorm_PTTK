@@ -1,9 +1,7 @@
-// backend/src/database/BoiThuongDB.js
 import prisma from '../config/prisma.js'
 
 class BoiThuongDB {
-  // LoadBT(maBT): kèm tên KH, CCCD, SĐT, và số lần vi phạm — tất cả tính
-  // trong SQL để tránh lỗi lệch precision khi vòng Date qua JS.
+  // LoadBT(maBT): kèm tên KH, CCCD, SĐT, và số lần vi phạm 
   static async LoadBT(maBT) {
   const rows = await prisma.$queryRaw`
     SELECT bt.ma_bt AS "maBT", bt.ngay_bt AS "ngayBT", bt.ma_kh AS "maKH", bt.nv_quan_ly AS "nvQuanLy",
@@ -19,9 +17,7 @@ class BoiThuongDB {
   return rows[0] || null
 }
 
-
-  // LoadDSBTChoXuLy: dùng window function COUNT() OVER thay vì subquery
-  // tương quan cho từng dòng -> Postgres chỉ quét bảng 1 lần, nhanh hơn.
+ 
   static async LoadDSBTChoXuLy(maCN, tuKhoa = '') {
   const rows = await prisma.$queryRaw`
     SELECT bt.ma_bt AS "maBT", bt.ngay_bt AS "ngayBT", bt.ma_kh AS "maKH", bt.nv_quan_ly AS "nvQuanLy",
@@ -50,8 +46,7 @@ class BoiThuongDB {
     return this.LoadDSBTChoXuLy(maCN, tuKhoa)
   }
 
-  // Dùng cho màn chi tiết PT đã lập — tính trực tiếp qua ma_bt, không
-  // vòng qua Date của JS (tránh bug mất precision như đã nêu).
+  // Dùng cho màn chi tiết PT đã lập 
  static async TinhSoLanViPhamTheoBT(maBT) {
   const rows = await prisma.$queryRaw`
     SELECT (

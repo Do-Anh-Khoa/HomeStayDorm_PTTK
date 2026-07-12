@@ -1,4 +1,3 @@
-// backend/src/entities/PhieuThuBoiThuong.js
 import PhieuThuBoiThuongDB from '../database/PhieuThuBoiThuongDB.js'
 
 class PhieuThuBoiThuong {
