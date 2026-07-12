@@ -11,6 +11,7 @@ import phongGiuongRoutes from './phong-giuong.routes.js'
 import quyDinhKtxRoutes from './quy-dinh-ktx.routes.js'
 import vatDungRoutes from './vat-dung.routes.js'
 import saleDashboardRoutes from './sale-dashboard.routes.js'
+import hoSoDangKyRoutes from './ho-so-dang-ky.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -25,4 +26,5 @@ router.use('/phong-giuong', phongGiuongRoutes)
 router.use('/quy-dinh-ktx', authMiddleware, quyDinhKtxRoutes)
 router.use('/vat-dung', vatDungRoutes)
 router.use('/sale-dashboard', authMiddleware, saleDashboardRoutes)
+router.use('/ho-so-dang-ky', authMiddleware, hoSoDangKyRoutes)
 export default router
