@@ -215,7 +215,7 @@ export default function TrangChuQuanLyPage() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const response = await api.get('/dashboard/manager')
+        const response = await api.get('/dashboard-qly/manager')
 
         if (response.data?.success) {
           const { summaryCards: serverSummaryCards, bedStats: serverBedStats, receiptStats: serverReceiptStats, description: serverDescription } = response.data.data
