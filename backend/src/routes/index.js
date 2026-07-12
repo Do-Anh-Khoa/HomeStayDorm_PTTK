@@ -10,8 +10,14 @@ import loaiPhongRoutes from './loai-phong.routes.js'
 import phongGiuongRoutes from './phong-giuong.routes.js'
 import quyDinhKtxRoutes from './quy-dinh-ktx.routes.js'
 import vatDungRoutes from './vat-dung.routes.js'
+import dashboardRoutesQly from './dashboard_qly.routes.js'
 import saleDashboardRoutes from './sale-dashboard.routes.js'
 import hoSoDangKyRoutes from './ho-so-dang-ky.routes.js'
+import dashboardRoutes from './dashboard.routes.js'
+import phuTrachDashboardRoutes from './phu-trach-dashboard.routes.js'
+import traCuuPhongGiuongRoutes from './tra-cuu-phong-giuong.routes.js'
+import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
+import boiThuongRoutes from './boi-thuong.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -27,4 +33,10 @@ router.use('/quy-dinh-ktx', authMiddleware, quyDinhKtxRoutes)
 router.use('/vat-dung', vatDungRoutes)
 router.use('/sale-dashboard', authMiddleware, saleDashboardRoutes)
 router.use('/ho-so-dang-ky', authMiddleware, hoSoDangKyRoutes)
+router.use('/dashboard-qly', authMiddleware, dashboardRoutesQly)
+router.use('/dashboard', authMiddleware, dashboardRoutes)
+router.use('/phu-trach-dashboard', authMiddleware, phuTrachDashboardRoutes)
+router.use('/tra-cuu-phong-giuong', authMiddleware, traCuuPhongGiuongRoutes)
+router.use('/vat-dung-hu-hai', authMiddleware, vatDungHuHaiRoutes)
+router.use('/boi-thuong', authMiddleware, boiThuongRoutes)
 export default router
