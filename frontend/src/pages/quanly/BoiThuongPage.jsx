@@ -1,73 +1,91 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageTitle from '../../components/common/PageTitle.jsx'
+import api from '../../services/api.js'
 
-// FRONTEND MOCK TRƯỚC
-// Sau này có backend thì thay mấy mảng này bằng api.get(...)
-const MOCK_CUSTOMERS = [
-  {
-    ma_kh: 'KH001',
-    ten_kh: 'Nguyễn Văn An',
-    cccd: '012345678901',
-    sdt: '0901234567',
+const normalizeText = value => {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+}
 
-    // Backend sau này trả cảnh báo thì mới hiện dòng vàng.
-    // Không có cảnh báo thì để chuỗi rỗng.
-    canh_bao: '',
-  },
-  {
-    ma_kh: 'KH002',
-    ten_kh: 'Trần Thị Bình',
-    cccd: '0123456789',
-    sdt: '0987654321',
-    canh_bao: '',
-  },
-]
+const formatDate = value => {
+  if (!value) return ''
 
-const MOCK_HISTORY_TODAY = []
+  const date = new Date(value)
 
-const IconSearch = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-)
+  if (Number.isNaN(date.getTime())) return ''
 
-function ConfirmDialog({ onCancel, onConfirm, submitting }) {
+  return new Intl.DateTimeFormat('vi-VN').format(date)
+}
+
+const getErrorMessage = error => {
   return (
-    <div style={S.overlay}>
-      <div style={S.confirmBox}>
-        <h3 style={S.confirmTitle}>Xác nhận tạo biên bản</h3>
+    error?.response?.data?.message ||
+    error?.message ||
+    'Đã có lỗi xảy ra.'
+  )
+}
 
-        <p style={S.confirmBody}>
-          Bạn có muốn tạo biên bản bồi thường?
+function EmptyRow({ colSpan, text }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} style={S.emptyCell}>
+        {text}
+      </td>
+    </tr>
+  )
+}
+
+function WarningBox({ message }) {
+  if (!message) {
+    return null
+  }
+
+  return (
+    <div style={S.warningBox}>
+      {message}
+    </div>
+  )
+}
+
+function SuccessPopup({ onBack }) {
+  return (
+    <div style={S.successOverlay}>
+      <div style={S.successBox}>
+        <div style={S.successIcon}>✓</div>
+
+        <h3 style={S.successTitle}>Ghi nhận thành công</h3>
+
+        <p style={S.successText}>
+          Biên bản bồi thường đã được hệ thống ghi nhận thành công.
+        </p>
+
+        <button type="button" style={S.btnSuccessBack} onClick={onBack}>
+          ← Quay lại danh sách
+        </button>
+      </div>
+    </div>
+  )
+}
+
+
+function ConfirmPopup({ saving, onCancel, onConfirm }) {
+  return (
+    <div style={S.confirmOverlay}>
+      <div style={S.confirmBox}>
+        <h3 style={S.confirmTitle}>Xác nhận ghi nhận</h3>
+
+        <p style={S.confirmText}>
+          Bạn có chắc chắn muốn ghi nhận biên bản bồi thường của khách hàng này không?
         </p>
 
         <div style={S.confirmFooter}>
-          <button
-            type="button"
-            style={S.btnSecondary}
-            onClick={onCancel}
-            disabled={submitting}
-          >
+          <button type="button" style={S.btnConfirmCancel} onClick={onCancel}>
             Hủy
           </button>
 
-          <button
-            type="button"
-            style={S.btnPrimary}
-            onClick={onConfirm}
-            disabled={submitting}
-          >
-            {submitting ? 'Đang lưu…' : 'Xác nhận'}
+          <button type="button" style={S.btnConfirmOk} disabled={saving} onClick={onConfirm}>
+            {saving ? 'Đang lưu...' : 'Xác nhận'}
           </button>
         </div>
       </div>
@@ -75,268 +93,202 @@ function ConfirmDialog({ onCancel, onConfirm, submitting }) {
   )
 }
 
-function CustomerSearchView({
-  keyword,
-  setKeyword,
-  customers,
-  historyToday,
-  onSearch,
-  onSelectCustomer,
-}) {
+function CustomerTable({ rows, loading, onSelect }) {
   return (
-    <section>
-      <div style={{ marginBottom: '16px' }}>
-        <PageTitle
-          title="Ghi nhận bồi thường"
-          description="Tạo biên bản bồi thường cho khách hàng làm mất thẻ ra vào hoặc chìa khóa."
-        />
-      </div>
+    <div style={S.tableWrap}>
+      <table style={S.table}>
+        <thead>
+          <tr>
+            <th style={S.th}>Mã khách hàng</th>
+            <th style={S.th}>Tên khách hàng</th>
+            <th style={S.th}>CCCD</th>
+            <th style={S.th}>Số điện thoại</th>
+            <th style={S.th}>Mã phòng</th>
+            <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
+          </tr>
+        </thead>
 
-      <div style={S.card}>
-        <div style={S.searchRow}>
-          <div style={S.searchInputWrap}>
-            <span style={S.searchIcon}>
-              <IconSearch />
-            </span>
-
-            <input
-              style={S.inputSearch}
-              placeholder="Nhập CCCD, tên khách hàng hoặc số điện thoại"
-              value={keyword}
-              onChange={event => setKeyword(event.target.value)}
-              onKeyDown={event => {
-                if (event.key === 'Enter') {
-                  onSearch()
-                }
-              }}
-            />
-          </div>
-
-          <button
-            type="button"
-            style={S.btnSearch}
-            onClick={onSearch}
-          >
-            Tìm kiếm
-          </button>
-        </div>
-
-        <div style={S.tableWrap}>
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>Mã khách hàng</th>
-                <th style={S.th}>Tên khách hàng</th>
-                <th style={S.th}>CCCD</th>
-                <th style={S.th}>Số điện thoại</th>
-                <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
+        <tbody>
+          {loading ? (
+            <EmptyRow colSpan={6} text="Đang tải dữ liệu..." />
+          ) : rows.length === 0 ? (
+            <EmptyRow colSpan={6} text="Không có khách hàng phù hợp." />
+          ) : (
+            rows.map(row => (
+              <tr key={row.ma_kh} style={S.tr}>
+                <td style={S.td}>
+                  <strong>{row.ma_kh}</strong>
+                </td>
+                <td style={S.td}>{row.ten_khach_hang}</td>
+                <td style={S.td}>{row.cccd}</td>
+                <td style={S.td}>{row.sdt}</td>
+                <td style={S.td}>
+                  <strong>{row.ma_phong || 'Chưa có'}</strong>
+                </td>
+                <td style={{ ...S.td, textAlign: 'center' }}>
+                  <button type="button" style={S.btnAction} onClick={() => onSelect(row)}>
+                    Chọn
+                  </button>
+                </td>
               </tr>
-            </thead>
-
-            <tbody>
-              {customers.length === 0 ? (
-                <tr>
-                  <td colSpan="5" style={S.emptyCell}>
-                    Không tìm thấy khách hàng.
-                  </td>
-                </tr>
-              ) : (
-                customers.map(customer => (
-                  <tr key={customer.ma_kh} style={S.tr}>
-                    <td style={S.td}>
-                      <strong>{customer.ma_kh}</strong>
-                    </td>
-
-                    <td style={S.td}>{customer.ten_kh}</td>
-
-                    <td style={S.td}>{customer.cccd}</td>
-
-                    <td style={S.td}>{customer.sdt}</td>
-
-                    <td style={{ ...S.td, textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        style={S.btnChoose}
-                        onClick={() => onSelectCustomer(customer)}
-                      >
-                        Chọn
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div style={{ marginTop: '18px', marginBottom: '12px' }}>
-        <PageTitle
-          title="Lịch sử ghi nhận bồi thường"
-          description="Xem chi tiết các biên bản bồi thường đã được ghi nhận."
-        />
-      </div>
-
-      <div style={S.card}>
-        <div style={S.tableWrap}>
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>Mã phiếu thu</th>
-                <th style={S.th}>Tên khách hàng</th>
-                <th style={S.th}>Ngày thanh toán</th>
-                <th style={S.th}>Loại phiếu thu</th>
-                <th style={S.th}>Trạng thái</th>
-                <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {historyToday.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={S.emptyCell}>
-                    Chưa có biên bản bồi thường nào trong hôm nay.
-                  </td>
-                </tr>
-              ) : (
-                historyToday.map(item => (
-                  <tr key={item.ma_phieu_thu} style={S.tr}>
-                    <td style={S.td}>
-                      <strong>{item.ma_phieu_thu}</strong>
-                    </td>
-
-                    <td style={S.td}>{item.ten_kh}</td>
-
-                    <td style={S.td}>{item.ngay_thanh_toan || '—'}</td>
-
-                    <td style={S.td}>{item.loai_phieu_thu}</td>
-
-                    <td style={S.td}>{item.trang_thai}</td>
-
-                    <td style={{ ...S.td, textAlign: 'center' }}>
-                      <button type="button" style={S.btnChoose}>
-                        Xem
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
-function CompensationDetailView({
+function HistoryTable({ rows, loading, onViewDetail }) {
+  return (
+    <div style={S.tableWrap}>
+      <table style={S.table}>
+        <thead>
+          <tr>
+            <th style={S.th}>Mã bồi thường</th>
+            <th style={S.th}>Mã khách hàng</th>
+            <th style={S.th}>Tên khách hàng</th>
+            <th style={S.th}>Mã phòng</th>
+            <th style={S.th}>Ngày ghi nhận</th>
+            <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {loading ? (
+            <EmptyRow colSpan={6} text="Đang tải dữ liệu..." />
+          ) : rows.length === 0 ? (
+            <EmptyRow colSpan={6} text="Chưa có biên bản bồi thường nào trong hôm nay." />
+          ) : (
+            rows.map(row => (
+              <tr key={row.ma_bt} style={S.tr}>
+              <td style={S.td}>
+              <strong>{row.ma_bt}</strong>
+              </td>
+
+            <td style={S.td}>
+              <strong>{row.ma_kh}</strong>
+            </td>
+
+            <td style={S.td}>{row.ten_khach_hang}</td>
+
+            <td style={S.td}>
+              <strong>{row.ma_phong || 'Chưa có'}</strong>
+            </td>
+
+            <td style={S.td}>{formatDate(row.ngay_bt)}</td>
+
+            <td style={{ ...S.td, textAlign: 'center' }}>
+    <button type="button" style={S.btnAction} onClick={() => onViewDetail(row)}>
+      Xem chi tiết
+    </button>
+  </td>
+</tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function DetailView({
   customer,
+  historyItem,
+  mode,
+  saving,
+  showConfirm,
+  showSuccess,
   onCancel,
-  onCreate,
-  submitting,
+  onSave,
+  onCancelConfirm,
+  onConfirmSave,
+  onSuccessBack,
 }) {
-  const [showConfirm, setShowConfirm] = useState(false)
-
-  const todayText = useMemo(() => {
-    return new Intl.DateTimeFormat('vi-VN').format(new Date())
-  }, [])
-
-  const handleConfirmCreate = async () => {
-    await onCreate({
-      ma_kh: customer.ma_kh,
-      loai_vi_pham: 'Mất thẻ hoặc chìa khóa',
-    })
-
-    setShowConfirm(false)
-  }
+  const isHistory = mode === 'history'
+  const displayCustomer = customer || historyItem
+  const warningMessage = displayCustomer?.canh_bao || null
 
   return (
-    <section>
+    <section style={S.page}>
       <div style={S.breadcrumb}>
-        Chọn khách hàng <span>/</span> Ghi nhận chi tiết bồi thường
+        Chọn khách hàng <span>/</span>{' '}
+        {isHistory ? 'Chi tiết bồi thường' : 'Ghi nhận chi tiết bồi thường'}
       </div>
 
-      <div style={{ marginBottom: '14px' }}>
-        <PageTitle
-          title="Ghi nhận bồi thường mất thẻ/chìa khóa"
-          description="Quản lý thông tin bồi thường đối với thẻ hoặc chìa khóa bị thất lạc."
-        />
-      </div>
+      <PageTitle
+        title="Ghi nhận bồi thường mất thẻ/chìa khóa"
+        description="Quản lý thông tin bồi thường đối với thẻ hoặc chìa khóa bị thất lạc."
+      />
 
       <div style={S.detailCard}>
-        <h3 style={S.sectionTitle}>THÔNG TIN KHÁCH HÀNG</h3>
+        <h2 style={S.sectionTitle}>THÔNG TIN KHÁCH HÀNG</h2>
 
         <div style={S.customerInfoGrid}>
           <div>
-            <p style={S.infoLabel}>HỌ TÊN KHÁCH HÀNG</p>
-            <strong style={S.infoValue}>{customer.ten_kh}</strong>
+            <div style={S.infoLabel}>HỌ TÊN KHÁCH HÀNG</div>
+            <div style={S.infoValue}>{displayCustomer.ten_khach_hang}</div>
           </div>
 
           <div>
-            <p style={S.infoLabel}>CCCD</p>
-            <strong style={S.infoValue}>{customer.cccd}</strong>
+            <div style={S.infoLabel}>CCCD</div>
+            <div style={S.infoValue}>{displayCustomer.cccd}</div>
           </div>
 
           <div>
-            <p style={S.infoLabel}>SỐ ĐIỆN THOẠI</p>
-            <strong style={S.infoValue}>{customer.sdt}</strong>
+            <div style={S.infoLabel}>SỐ ĐIỆN THOẠI</div>
+            <div style={S.infoValue}>{displayCustomer.sdt || 'Chưa có'}</div>
           </div>
 
           <div>
-            <p style={S.infoLabel}>NGÀY</p>
-            <strong style={S.infoValue}>{todayText}</strong>
+            <div style={S.infoLabel}>MÃ PHÒNG</div>
+            <div style={S.infoValue}>{displayCustomer.ma_phong || 'Chưa có'}</div>
+          </div>
+
+          <div>
+            <div style={S.infoLabel}>NGÀY</div>
+            <div style={S.infoValue}>
+              {isHistory ? formatDate(historyItem.ngay_bt) : formatDate(new Date())}
+            </div>
           </div>
         </div>
 
         <div style={S.divider} />
 
-        <h3 style={S.sectionTitle}>CHI TIẾT BỒI THƯỜNG</h3>
+        <h2 style={S.sectionTitle}>CHI TIẾT BỒI THƯỜNG</h2>
 
-        <div style={S.formGroup}>
-          <label style={S.label}>Loại vi phạm</label>
+        <label style={S.formLabel}>Loại vi phạm</label>
+        <input
+          style={S.readonlyInput}
+          value="Mất thẻ ra vào ký túc xá"
+          readOnly
+        />
 
-          <input
-            style={S.inputNormal}
-            value="Mất thẻ hoặc chìa khóa"
-            readOnly
-          />
-        </div>
-
-        {/* Không hiện cố định.
-            Sau này backend trả customer.canh_bao thì mới hiện. */}
-        {customer.canh_bao && (
-          <div style={S.warningBox}>
-            {customer.canh_bao}
-          </div>
-        )}
+        <WarningBox message={warningMessage} />
       </div>
 
-      <div style={S.bottomBar}>
-        <button
-          type="button"
-          style={S.btnSecondary}
-          onClick={onCancel}
-          disabled={submitting}
-        >
+      <div style={S.footerBar}>
+        <button type="button" style={S.btnCancel} onClick={onCancel}>
           Hủy
         </button>
 
-        <button
-          type="button"
-          style={S.btnPrimary}
-          onClick={() => setShowConfirm(true)}
-          disabled={submitting}
-        >
-          Tạo biên bản bồi thường
-        </button>
+        {!isHistory && (
+          <button type="button" style={S.btnCreate} disabled={saving} onClick={onSave}>
+            Tạo biên bản bồi thường
+          </button>
+        )}
       </div>
 
       {showConfirm && (
-        <ConfirmDialog
-          onCancel={() => setShowConfirm(false)}
-          onConfirm={handleConfirmCreate}
-          submitting={submitting}
+        <ConfirmPopup
+          saving={saving}
+          onCancel={onCancelConfirm}
+          onConfirm={onConfirmSave}
         />
+      )}
+
+      {showSuccess && (
+        <SuccessPopup onBack={onSuccessBack} />
       )}
     </section>
   )
@@ -344,155 +296,216 @@ function CompensationDetailView({
 
 export default function BoiThuongPage() {
   const [view, setView] = useState('list')
-  const [keyword, setKeyword] = useState('')
+  const [mode, setMode] = useState('record')
+
+  const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
+
   const [customers, setCustomers] = useState([])
-  const [historyToday, setHistoryToday] = useState([])
+  const [historyRows, setHistoryRows] = useState([])
+  const [loading, setLoading] = useState(false)
+
   const [selectedCustomer, setSelectedCustomer] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [toast, setToast] = useState(null)
+  const [selectedHistory, setSelectedHistory] = useState(null)
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type })
+  const [saving, setSaving] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
-    setTimeout(() => {
-      setToast(null)
-    }, 3000)
+  const fetchData = async () => {
+    setLoading(true)
+
+    try {
+      const response = await api.get('/boi-thuong')
+      const data = response.data?.data || response.data || {}
+
+      setCustomers(Array.isArray(data.customers) ? data.customers : [])
+      setHistoryRows(Array.isArray(data.history) ? data.history : [])
+    } catch (error) {
+      console.error(error)
+      window.alert(getErrorMessage(error))
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    setCustomers(MOCK_CUSTOMERS)
-    setHistoryToday(MOCK_HISTORY_TODAY)
+    fetchData()
   }, [])
 
-  const handleSearch = () => {
-    const q = keyword.trim().toLowerCase()
+  const filteredCustomers = useMemo(() => {
+  const keyword = normalizeText(appliedSearch)
 
-    if (!q) {
-      setCustomers(MOCK_CUSTOMERS)
-      return
-    }
-
-    const result = MOCK_CUSTOMERS.filter(customer => {
-      return (
-        customer.ma_kh.toLowerCase().includes(q) ||
-        customer.ten_kh.toLowerCase().includes(q) ||
-        customer.cccd.toLowerCase().includes(q) ||
-        customer.sdt.toLowerCase().includes(q)
-      )
-    })
-
-    setCustomers(result)
+  if (!keyword) {
+    return customers
   }
 
-  const handleSelectCustomer = customer => {
-    setSelectedCustomer(customer)
+  return customers.filter(row => {
+    return (
+      normalizeText(row.ma_kh).includes(keyword) ||
+      normalizeText(row.cccd).includes(keyword) ||
+      normalizeText(row.sdt).includes(keyword)
+    )
+  })
+}, [customers, appliedSearch])
+
+  const handleSearch = () => {
+    setAppliedSearch(search)
+  }
+
+  const handleSelectCustomer = row => {
+    setSelectedCustomer(row)
+    setSelectedHistory(null)
+    setMode('record')
+    setShowConfirm(false)
+    setShowSuccess(false)
     setView('detail')
   }
 
-  const handleCreateCompensation = async payload => {
-    setSubmitting(true)
+  const handleViewHistory = row => {
+    setSelectedHistory(row)
+    setSelectedCustomer(null)
+    setMode('history')
+    setShowConfirm(false)
+    setShowSuccess(false)
+    setView('detail')
+  }
+
+  const resetDetail = () => {
+    setView('list')
+    setSelectedCustomer(null)
+    setSelectedHistory(null)
+    setShowConfirm(false)
+    setShowSuccess(false)
+  }
+
+  const handleOpenConfirm = () => {
+    setShowConfirm(true)
+  }
+
+  const handleConfirmSave = async () => {
+    if (!selectedCustomer) return
+
+    setSaving(true)
 
     try {
-      console.log('Tạo biên bản bồi thường frontend mock:', payload)
+      await api.post('/boi-thuong', {
+        ma_kh: selectedCustomer.ma_kh,
+      })
 
-      const now = new Date()
-
-      const fakeReceiptCode = `PTBT_TEMP_${String(
-        historyToday.length + 1
-      ).padStart(3, '0')}`
-
-      const newHistoryItem = {
-        ma_phieu_thu: fakeReceiptCode,
-        ten_kh: selectedCustomer.ten_kh,
-        ngay_thanh_toan: new Intl.DateTimeFormat('vi-VN').format(now),
-        loai_phieu_thu: 'Bồi thường',
-        trang_thai: 'Đã ghi nhận',
-      }
-
-      setHistoryToday(current => [
-        newHistoryItem,
-        ...current,
-      ])
-
-      showToast('Tạo biên bản bồi thường thành công.')
-
-      setSelectedCustomer(null)
-      setView('list')
-    } catch {
-      showToast('Không thể tạo biên bản bồi thường.', 'error')
+      setShowConfirm(false)
+      setShowSuccess(true)
+    } catch (error) {
+      console.error(error)
+      window.alert(getErrorMessage(error))
     } finally {
-      setSubmitting(false)
+      setSaving(false)
     }
   }
 
-  if (view === 'detail' && selectedCustomer) {
-    return (
-      <>
-        <CompensationDetailView
-          customer={selectedCustomer}
-          onCancel={() => {
-            setSelectedCustomer(null)
-            setView('list')
-          }}
-          onCreate={handleCreateCompensation}
-          submitting={submitting}
-        />
+  const handleSuccessBack = async () => {
+    resetDetail()
+    await fetchData()
+  }
 
-        {toast && (
-          <div
-            style={{
-              ...S.toast,
-              ...(toast.type === 'error'
-                ? S.toastError
-                : S.toastSuccess),
-            }}
-          >
-            {toast.message}
-          </div>
-        )}
-      </>
+  if (view === 'detail') {
+    return (
+      <DetailView
+        customer={selectedCustomer}
+        historyItem={selectedHistory}
+        mode={mode}
+        saving={saving}
+        showConfirm={showConfirm}
+        showSuccess={showSuccess}
+        onCancel={resetDetail}
+        onSave={handleOpenConfirm}
+        onCancelConfirm={() => setShowConfirm(false)}
+        onConfirmSave={handleConfirmSave}
+        onSuccessBack={handleSuccessBack}
+      />
     )
   }
 
   return (
-    <>
-      <CustomerSearchView
-        keyword={keyword}
-        setKeyword={setKeyword}
-        customers={customers}
-        historyToday={historyToday}
-        onSearch={handleSearch}
-        onSelectCustomer={handleSelectCustomer}
+    <section style={S.page}>
+      <PageTitle
+        title="Ghi nhận bồi thường"
+        description="Tạo biên bản bồi thường cho khách hàng làm mất thẻ ra vào hoặc chìa khóa."
       />
 
-      {toast && (
-        <div
-          style={{
-            ...S.toast,
-            ...(toast.type === 'error'
-              ? S.toastError
-              : S.toastSuccess),
-          }}
-        >
-          {toast.message}
+      <div style={S.card}>
+        <div style={S.searchRow}>
+          <div style={S.searchInputWrap}>
+            <span style={S.searchIcon}>⌕</span>
+
+            <input
+              style={S.searchInput}
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  handleSearch()
+                }
+              }}
+              placeholder="Nhập mã khách hàng, CCCD hoặc số điện thoại"
+            />
+          </div>
+
+          <button type="button" style={S.btnSearch} onClick={handleSearch}>
+            Tìm kiếm
+          </button>
         </div>
-      )}
-    </>
+
+        <CustomerTable
+          rows={filteredCustomers}
+          loading={loading}
+          onSelect={handleSelectCustomer}
+        />
+      </div>
+
+      <div style={S.historyHeader}>
+        <PageTitle
+          title="Lịch sử ghi nhận bồi thường"
+          description="Xem chi tiết các biên bản bồi thường đã được ghi nhận."
+        />
+      </div>
+
+      <div style={S.card}>
+        <HistoryTable
+          rows={historyRows}
+          loading={loading}
+          onViewDetail={handleViewHistory}
+        />
+      </div>
+    </section>
   )
 }
 
 const S = {
+  page: {
+    padding: '0',
+  },
+
+  breadcrumb: {
+    marginBottom: '8px',
+    color: '#6b7560',
+    fontSize: '13px',
+    fontWeight: 700,
+  },
+
   card: {
-    backgroundColor: '#fff',
-    border: '1px solid #dde3d8',
+    border: '1px solid #d9ded4',
     borderRadius: '8px',
-    padding: '16px',
+    padding: '18px',
+    backgroundColor: '#fff',
+    marginTop: '16px',
+    marginBottom: '24px',
   },
 
   searchRow: {
     display: 'flex',
-    gap: '10px',
-    marginBottom: '16px',
+    gap: '14px',
+    marginBottom: '18px',
   },
 
   searchInputWrap: {
@@ -502,74 +515,65 @@ const S = {
 
   searchIcon: {
     position: 'absolute',
-    left: '12px',
+    left: '14px',
     top: '50%',
     transform: 'translateY(-50%)',
     color: '#6b7560',
-    display: 'inline-flex',
+    fontSize: '24px',
+    lineHeight: 1,
   },
 
-  inputSearch: {
+  searchInput: {
     width: '100%',
-    height: '42px',
+    height: '48px',
     boxSizing: 'border-box',
-    padding: '10px 14px 10px 38px',
+    padding: '0 14px 0 44px',
     border: '1.5px solid #cfd6c9',
     borderRadius: '4px',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    color: '#1a1f14',
-    outline: 'none',
     backgroundColor: '#fff',
-  },
-
-  inputNormal: {
-    width: '100%',
-    height: '42px',
-    boxSizing: 'border-box',
-    padding: '10px 14px',
-    border: '1.5px solid #cfd6c9',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontFamily: 'inherit',
     color: '#1a1f14',
+    fontFamily: 'inherit',
+    fontSize: '15px',
     outline: 'none',
-    backgroundColor: '#fff',
   },
 
   btnSearch: {
-    width: '100px',
-    height: '42px',
-    backgroundColor: '#3b4f27',
-    color: '#fff',
+    width: '112px',
+    height: '48px',
     border: 'none',
     borderRadius: '4px',
-    fontWeight: 700,
-    fontSize: '14px',
-    cursor: 'pointer',
+    backgroundColor: '#3b4f27',
+    color: '#fff',
     fontFamily: 'inherit',
+    fontSize: '15px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
 
   tableWrap: {
+    maxHeight: '260px',
+    overflowY: 'auto',
+    overflowX: 'hidden',
     border: '1px solid #dde3d8',
     borderRadius: '4px',
-    overflow: 'hidden',
     backgroundColor: '#fff',
   },
 
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '14px',
   },
 
   th: {
-    padding: '13px 18px',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1,
+    padding: '15px 20px',
+    backgroundColor: '#f8f9f7',
+    color: '#626d56',
     textAlign: 'left',
-    backgroundColor: '#f5f6f3',
-    color: '#6b7560',
-    fontWeight: 700,
-    fontSize: '12px',
+    fontSize: '13px',
+    fontWeight: 800,
     borderBottom: '1px solid #dde3d8',
   },
 
@@ -578,169 +582,185 @@ const S = {
   },
 
   td: {
-    padding: '13px 18px',
-    color: '#1a1f14',
+    padding: '14px 20px',
+    color: '#11160f',
+    fontSize: '15px',
     verticalAlign: 'middle',
   },
 
   emptyCell: {
-    padding: '28px',
-    color: '#8b9285',
+    padding: '30px 20px',
+    color: '#7a8372',
     textAlign: 'center',
-    fontSize: '14px',
+    fontSize: '15px',
   },
 
-  btnChoose: {
-    minWidth: '66px',
-    height: '30px',
+  btnAction: {
+    minWidth: '74px',
+    height: '34px',
     padding: '0 14px',
-    backgroundColor: '#3b4f27',
-    color: '#fff',
     border: 'none',
     borderRadius: '6px',
-    fontWeight: 700,
-    fontSize: '12px',
-    cursor: 'pointer',
+    backgroundColor: '#3b4f27',
+    color: '#fff',
     fontFamily: 'inherit',
+    fontSize: '13px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
 
-  breadcrumb: {
-    fontSize: '13px',
-    color: '#6b7560',
-    marginBottom: '6px',
+  historyHeader: {
+    marginTop: '18px',
   },
 
   detailCard: {
-    backgroundColor: '#fff',
-    border: '1px solid #cfd6c9',
+    border: '1px solid #d9ded4',
     borderRadius: '8px',
-    padding: '24px 26px',
+    backgroundColor: '#fff',
+    padding: '28px 30px 44px',
+    marginTop: '18px',
   },
 
   sectionTitle: {
-    margin: '0 0 18px',
-    color: '#1a1f14',
-    fontSize: '22px',
-    fontWeight: 800,
+    margin: '0 0 24px',
+    color: '#061108',
+    fontSize: '23px',
+    fontWeight: 900,
   },
 
   customerInfoGrid: {
     display: 'grid',
-    gridTemplateColumns: '1.3fr 1fr 1fr 1fr',
-    gap: '22px',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: '28px',
   },
 
   infoLabel: {
-    margin: '0 0 4px',
-    color: '#6b7560',
-    fontSize: '11px',
-    fontWeight: 700,
+    color: '#626d56',
+    fontSize: '12px',
+    fontWeight: 900,
+    marginBottom: '10px',
   },
 
   infoValue: {
-    color: '#1a1f14',
-    fontSize: '14px',
-    fontWeight: 700,
+    color: '#061108',
+    fontSize: '15px',
+    fontWeight: 800,
   },
 
   divider: {
-    borderTop: '1px solid #cfd6c9',
-    margin: '18px 0',
+    height: '1px',
+    backgroundColor: '#d9ded4',
+    margin: '26px 0 24px',
   },
 
-  formGroup: {
-    marginBottom: '16px',
-  },
-
-  label: {
+  formLabel: {
     display: 'block',
-    fontSize: '13.5px',
-    fontWeight: 600,
-    color: '#1a1f14',
-    marginBottom: '7px',
+    marginBottom: '10px',
+    color: '#061108',
+    fontSize: '14px',
+    fontWeight: 800,
+  },
+
+  readonlyInput: {
+    width: '100%',
+    height: '48px',
+    boxSizing: 'border-box',
+    padding: '0 16px',
+    border: '1.5px solid #cfd6c9',
+    borderRadius: '4px',
+    backgroundColor: '#fff',
+    color: '#11160f',
+    fontFamily: 'inherit',
+    fontSize: '15px',
+    outline: 'none',
   },
 
   warningBox: {
     marginTop: '14px',
-    padding: '14px 16px',
-    backgroundColor: '#f3ffa2',
-    border: '1px solid #cbd96a',
+    padding: '12px 14px',
+    border: '1px solid #e3e882',
     borderRadius: '4px',
-    color: '#1a1f14',
-    fontSize: '14px',
-    fontWeight: 700,
+    backgroundColor: '#f1ff91',
+    color: '#334414',
+    fontSize: '13px',
+    fontWeight: 800,
     textTransform: 'uppercase',
   },
 
-  bottomBar: {
+  footerBar: {
     position: 'fixed',
-    left: '280px',
-    right: '0',
-    bottom: '0',
-    minHeight: '72px',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '78px',
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: '12px',
-    padding: '0 24px',
-    borderTop: '1px solid #dde3d8',
+    gap: '14px',
+    padding: '0 26px',
+    borderTop: '1px solid #d9ded4',
     backgroundColor: '#fff',
     zIndex: 50,
   },
 
-  btnSecondary: {
-    padding: '9px 20px',
-    backgroundColor: '#fff',
-    color: '#1a1f14',
-    border: '1.5px solid #cfd6c9',
+  btnCancel: {
+    width: '76px',
+    height: '44px',
+    border: '1px solid #c9cfc3',
     borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
+    backgroundColor: '#fff',
+    color: '#11160f',
     fontFamily: 'inherit',
+    fontSize: '15px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
 
-  btnPrimary: {
-    padding: '10px 22px',
-    backgroundColor: '#3b4f27',
-    color: '#fff',
+  btnCreate: {
+    width: '236px',
+    height: '44px',
     border: 'none',
     borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 700,
-    cursor: 'pointer',
+    backgroundColor: '#3b4f27',
+    color: '#fff',
     fontFamily: 'inherit',
+    fontSize: '15px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
 
-  overlay: {
+
+  confirmOverlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    zIndex: 1100,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    backgroundColor: 'rgba(30, 35, 28, 0.28)',
   },
 
   confirmBox: {
+    width: '430px',
+    borderRadius: '8px',
     backgroundColor: '#fff',
-    borderRadius: '12px',
-    width: '380px',
-    padding: '28px 28px 24px',
-    boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+    boxShadow: '0 18px 60px rgba(0,0,0,0.22)',
+    overflow: 'hidden',
   },
 
   confirmTitle: {
-    margin: '0 0 12px',
-    fontSize: '16px',
-    fontWeight: 700,
-    color: '#1a1f14',
+    margin: 0,
+    padding: '22px 24px 12px',
+    color: '#11160f',
+    fontSize: '20px',
+    fontWeight: 900,
   },
 
-  confirmBody: {
-    margin: '0 0 24px',
+  confirmText: {
+    margin: 0,
+    padding: '0 24px 22px',
+    color: '#4f574b',
     fontSize: '14px',
-    color: '#4a4a4a',
     lineHeight: 1.6,
   },
 
@@ -748,27 +768,93 @@ const S = {
     display: 'flex',
     justifyContent: 'flex-end',
     gap: '10px',
+    padding: '16px 24px',
+    backgroundColor: '#f5f5f4',
   },
 
-  toast: {
+  btnConfirmCancel: {
+    minWidth: '72px',
+    height: '36px',
+    border: '1px solid #c9cfc3',
+    borderRadius: '4px',
+    backgroundColor: '#fff',
+    color: '#11160f',
+    fontFamily: 'inherit',
+    fontSize: '13px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+
+  btnConfirmOk: {
+    minWidth: '86px',
+    height: '36px',
+    border: 'none',
+    borderRadius: '4px',
+    backgroundColor: '#3b4f27',
+    color: '#fff',
+    fontFamily: 'inherit',
+    fontSize: '13px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+
+  successOverlay: {
     position: 'fixed',
-    top: '90px',
-    right: '24px',
-    padding: '12px 20px',
+    inset: 0,
+    zIndex: 1200,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(30, 35, 28, 0.28)',
+  },
+
+  successBox: {
+    width: '320px',
     borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: 600,
-    zIndex: 2000,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+    backgroundColor: '#fff',
+    boxShadow: '0 18px 60px rgba(0,0,0,0.22)',
+    padding: '28px 22px 22px',
+    textAlign: 'center',
   },
 
-  toastSuccess: {
-    backgroundColor: '#2e7d32',
-    color: '#fff',
+  successIcon: {
+    width: '48px',
+    height: '48px',
+    margin: '0 auto 14px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d9f9e3',
+    color: '#22b65c',
+    fontSize: '28px',
+    fontWeight: 800,
   },
 
-  toastError: {
-    backgroundColor: '#c0392b',
+  successTitle: {
+    margin: '0 0 8px',
+    color: '#151915',
+    fontSize: '15px',
+    fontWeight: 900,
+  },
+
+  successText: {
+    margin: '0 0 18px',
+    color: '#4d554a',
+    fontSize: '12px',
+    lineHeight: 1.5,
+  },
+
+  btnSuccessBack: {
+    width: '100%',
+    height: '42px',
+    border: 'none',
+    borderRadius: '7px',
+    backgroundColor: '#3b4f27',
     color: '#fff',
+    fontFamily: 'inherit',
+    fontSize: '13px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
 }
