@@ -13,6 +13,7 @@ import vatDungRoutes from './vat-dung.routes.js'
 import dashboardRoutesQly from './dashboard_qly.routes.js'
 import saleDashboardRoutes from './sale-dashboard.routes.js'
 import dashboardRoutes from './dashboard.routes.js'
+import phuTrachDashboardRoutes from './phu-trach-dashboard.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -29,4 +30,5 @@ router.use('/vat-dung', vatDungRoutes)
 router.use('/sale-dashboard', authMiddleware, saleDashboardRoutes)
 router.use('/dashboard-qly', authMiddleware, dashboardRoutesQly)
 router.use('/dashboard', authMiddleware, dashboardRoutes)
+router.use('/phu-trach-dashboard', authMiddleware, phuTrachDashboardRoutes)
 export default router
