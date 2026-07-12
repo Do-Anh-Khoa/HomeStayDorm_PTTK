@@ -5,48 +5,69 @@ const normalizeStatus = (value = '') => String(value ?? '').trim().toLowerCase()
 const classifyBedStatus = (value = '') => {
   const status = normalizeStatus(value)
 
-  if (status.includes('đặt cọc') || status.includes('dat coc') || status.includes('deposit')) {
+  if (
+    status.includes('đặt cọc') ||
+    status.includes('dat coc') ||
+    status.includes('deposit')
+  ) {
     return 'Đã đặt cọc'
   }
 
-  if (status.includes('sử dụng') || status.includes('su dung') || status.includes('using') || status.includes('thuê') || status.includes('thue')) {
+  if (
+    status.includes('sử dụng') ||
+    status.includes('su dung') ||
+    status.includes('using') ||
+    status.includes('thuê') ||
+    status.includes('thue')
+  ) {
     return 'Đang sử dụng'
   }
 
-  if (status.includes('trống') || status.includes('trong') || status.includes('empty')) {
+  if (
+    status.includes('trống') ||
+    status.includes('trong') ||
+    status.includes('empty')
+  ) {
     return 'Trống'
   }
 
   return 'Trống'
 }
 
-const isPaidReceipt = (row) => {
-  if (row?.ngay_thanh_toan) {
-    return true
-  }
-
+const isValidReceipt = row => {
   const status = normalizeStatus(row?.trang_thai)
-  return status.includes('đã thanh toán') || status.includes('da thanh toan') || status.includes('paid') || status.includes('đã thu') || status.includes('da thu')
+  return (
+    status.includes('hợp lệ') ||
+    status.includes('hop le') ||
+    status.includes('valid')
+  )
 }
 
-const isValidReceipt = (row) => {
+const isInvalidReceipt = row => {
   const status = normalizeStatus(row?.trang_thai)
-  return status.includes('hợp lệ') || status.includes('hop le') || status.includes('valid')
+  return (
+    status.includes('không hợp lệ') ||
+    status.includes('khong hop le') ||
+    status.includes('invalid')
+  )
 }
 
-const isInvalidReceipt = (row) => {
-  const status = normalizeStatus(row?.trang_thai)
-  return status.includes('không hợp lệ') || status.includes('khong hop le') || status.includes('invalid')
-}
-
-const classifyReceipt = (row) => {
+const classifyReceipt = row => {
   const status = normalizeStatus(row?.trang_thai)
 
-  if (status.includes('không hợp lệ') || status.includes('khong hop le') || status.includes('invalid')) {
+  if (
+    status.includes('không hợp lệ') ||
+    status.includes('khong hop le') ||
+    status.includes('invalid')
+  ) {
     return 'invalid'
   }
 
-  if (status.includes('hợp lệ') || status.includes('hop le') || status.includes('valid')) {
+  if (
+    status.includes('hợp lệ') ||
+    status.includes('hop le') ||
+    status.includes('valid')
+  ) {
     return 'valid'
   }
 
@@ -61,14 +82,18 @@ const classifyReceipt = (row) => {
     return 'paid'
   }
 
-  if (status.includes('chưa thanh toán') || status.includes('chua thanh toan') || status.includes('unpaid')) {
+  if (
+    status.includes('chưa thanh toán') ||
+    status.includes('chua thanh toan') ||
+    status.includes('unpaid')
+  ) {
     return 'unpaid'
   }
 
   return 'unpaid'
 }
 
-const classifyReceiptAction = (row) => {
+const classifyReceiptAction = row => {
   const status = normalizeStatus(row?.trang_thai)
 
   if (
@@ -96,130 +121,171 @@ const classifyReceiptAction = (row) => {
   return 'needPayment'
 }
 
-const getTodayRange = () => {
-  const start = new Date()
-  start.setHours(0, 0, 0, 0)
+const buildReceiptStat = (label, rows) => ({
+  label,
+  values: rows.reduce(
+    (acc, row) => {
+      acc[classifyReceipt(row)] += 1
+      return acc
+    },
+    {
+      unpaid: 0,
+      paid: 0,
+      valid: 0,
+      invalid: 0,
+    },
+  ),
+})
 
-  const end = new Date()
-  end.setHours(23, 59, 59, 999)
+const getCurrentEmployeeBranch = async req => {
+  const maNv = req.auth?.ma_nv || req.authSession?.ma_nv || req.user?.ma_nv
 
-  return { start, end }
+  if (!maNv) {
+    return null
+  }
+
+  const rows = await prisma.$queryRaw`
+    SELECT
+      ma_nv,
+      ten_nv,
+      ma_cn
+    FROM nhanvien
+    WHERE ma_nv = ${maNv}
+    LIMIT 1
+  `
+
+  return rows[0] || null
 }
 
 export const getManagerDashboard = async (req, res) => {
   try {
-    const { start, end } = getTodayRange()
+    const currentEmployee = await getCurrentEmployeeBranch(req)
 
-    const [depositReceipts, contractReceipts, returnReceipts, compensationReceipts, bedRows, handoverRows] = await Promise.all([
-      prisma.pt_dat_coc.findMany({
-        select: {
-          trang_thai: true,
-          ngay_thanh_toan: true,
-        },
-      }),
-      prisma.pt_hop_dong.findMany({
-        select: {
-          trang_thai: true,
-          ngay_thanh_toan: true,
-        },
-      }),
-      prisma.pt_tra_phong.findMany({
-        select: {
-          trang_thai: true,
-          ngay_thanh_toan: true,
-        },
-      }),
-      prisma.pt_boi_thuong.findMany({
-        select: {
-          trang_thai: true,
-          ngay_thanh_toan: true,
-        },
-      }),
-      prisma.giuong.findMany({
-        select: {
-          trang_thai: true,
-        },
-      }),
+    if (!currentEmployee?.ma_cn) {
+      return res.status(401).json({
+        success: false,
+        message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
+      })
+    }
+
+    const maCn = currentEmployee.ma_cn
+
+    const [
+      depositReceipts,
+      contractReceipts,
+      returnReceipts,
+      compensationReceipts,
+      bedRows,
+      handoverRows,
+      returnRows,
+    ] = await Promise.all([
+      // Phiếu thu đặt cọc thuộc chi nhánh hiện tại
       prisma.$queryRaw`
-        SELECT ma_hdt
-        FROM hop_dong_thue
-        WHERE DATE(tg_vao) = CURRENT_DATE
+        SELECT
+          ptdc.ma_ptdc,
+          ptdc.trang_thai,
+          ptdc.ngay_thanh_toan
+        FROM pt_dat_coc ptdc
+        WHERE EXISTS (
+          SELECT 1
+          FROM phieu_dat_coc pdc
+          JOIN dat_coc_giuong dcg ON dcg.ma_pdc = pdc.ma_pdc
+          JOIN phong p ON p.ma_phong = dcg.ma_phong
+          WHERE pdc.ma_pdc = ptdc.ma_pdc
+            AND p.chi_nhanh = ${maCn}
+        )
+      `,
+
+      // Phiếu thu hợp đồng thuộc chi nhánh hiện tại
+      prisma.$queryRaw`
+        SELECT
+          pthd.ma_pthd,
+          pthd.trang_thai,
+          pthd.ngay_thanh_toan
+        FROM pt_hop_dong pthd
+        WHERE EXISTS (
+          SELECT 1
+          FROM hop_dong_thue hdt
+          JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hdt.ma_pdc
+          JOIN dat_coc_giuong dcg ON dcg.ma_pdc = pdc.ma_pdc
+          JOIN phong p ON p.ma_phong = dcg.ma_phong
+          WHERE hdt.ma_hdt = pthd.ma_hdt
+            AND p.chi_nhanh = ${maCn}
+        )
+      `,
+
+      // Phiếu thu trả phòng thuộc chi nhánh hiện tại
+      prisma.$queryRaw`
+        SELECT
+          pttp.ma_pttp,
+          pttp.trang_thai,
+          pttp.ngay_thanh_toan
+        FROM pt_tra_phong pttp
+        WHERE EXISTS (
+          SELECT 1
+          FROM ho_so_tra_phong hstp
+          JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hstp.ma_pdc
+          JOIN dat_coc_giuong dcg ON dcg.ma_pdc = pdc.ma_pdc
+          JOIN phong p ON p.ma_phong = dcg.ma_phong
+          WHERE hstp.ma_tp = pttp.ma_tp
+            AND p.chi_nhanh = ${maCn}
+        )
+      `,
+
+      // Phiếu thu bồi thường: bảng bồi thường không có phòng,
+      // nên lọc theo chi nhánh của nhân viên quản lý tạo bồi thường.
+      prisma.$queryRaw`
+        SELECT
+          ptbt.ma_ptdb,
+          ptbt.trang_thai,
+          ptbt.ngay_thanh_toan
+        FROM pt_boi_thuong ptbt
+        JOIN boi_thuong bt ON bt.ma_bt = ptbt.ma_bt
+        JOIN nhanvien nv ON nv.ma_nv = bt.nv_quan_ly
+        WHERE nv.ma_cn = ${maCn}
+      `,
+
+      // Tình trạng giường của chi nhánh hiện tại
+      prisma.$queryRaw`
+        SELECT
+          g.trang_thai
+        FROM giuong g
+        JOIN phong p ON p.ma_phong = g.ma_phong
+        WHERE p.chi_nhanh = ${maCn}
+      `,
+
+      // Lịch bàn giao hôm nay thuộc chi nhánh hiện tại
+      prisma.$queryRaw`
+        SELECT DISTINCT
+          hdt.ma_hdt
+        FROM hop_dong_thue hdt
+        JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hdt.ma_pdc
+        JOIN dat_coc_giuong dcg ON dcg.ma_pdc = pdc.ma_pdc
+        JOIN phong p ON p.ma_phong = dcg.ma_phong
+        WHERE DATE(hdt.tg_vao) = CURRENT_DATE
+          AND p.chi_nhanh = ${maCn}
+      `,
+
+      // Hồ sơ trả phòng hôm nay thuộc chi nhánh hiện tại
+      prisma.$queryRaw`
+        SELECT DISTINCT
+          hstp.ma_tp
+        FROM ho_so_tra_phong hstp
+        JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hstp.ma_pdc
+        JOIN dat_coc_giuong dcg ON dcg.ma_pdc = pdc.ma_pdc
+        JOIN phong p ON p.ma_phong = dcg.ma_phong
+        WHERE DATE(hstp.ngay_tp) = CURRENT_DATE
+          AND hstp.ngay_huy IS NULL
+          AND hstp.ghi_nhan_hu_hai = false
+          AND p.chi_nhanh = ${maCn}
       `,
     ])
 
-    const [cancelColumnCheck] = await prisma.$queryRaw`
-      SELECT EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = 'ho_so_tra_phong'
-          AND column_name = 'ngay_huy'
-      ) AS exists
-    `
-    const hasNgayHuyColumn = cancelColumnCheck?.exists === true || cancelColumnCheck?.exists === 't'
-
-    const returnRowsCount = hasNgayHuyColumn
-      ? Number(
-          (
-            await prisma.$queryRaw`
-              SELECT COUNT(*)::int AS count
-              FROM ho_so_tra_phong
-              WHERE DATE(ngay_tp) = CURRENT_DATE
-                AND ngay_huy IS NULL
-            `
-          )[0]?.count ?? 0,
-        )
-      : Number(
-          (
-            await prisma.$queryRaw`
-              SELECT COUNT(*)::int AS count
-              FROM ho_so_tra_phong
-              WHERE DATE(ngay_tp) = CURRENT_DATE
-            `
-          )[0]?.count ?? 0,
-        )
-
     const receiptStats = [
-      {
-        label: 'Đặt cọc',
-        values: depositReceipts.reduce(
-          (acc, row) => {
-            acc[classifyReceipt(row)] += 1
-            return acc
-          },
-          { unpaid: 0, paid: 0, valid: 0, invalid: 0 },
-        ),
-      },
-      {
-        label: 'Hợp đồng',
-        values: contractReceipts.reduce(
-          (acc, row) => {
-            acc[classifyReceipt(row)] += 1
-            return acc
-          },
-          { unpaid: 0, paid: 0, valid: 0, invalid: 0 },
-        ),
-      },
-      {
-        label: 'Trả phòng',
-        values: returnReceipts.reduce(
-          (acc, row) => {
-            acc[classifyReceipt(row)] += 1
-            return acc
-          },
-          { unpaid: 0, paid: 0, valid: 0, invalid: 0 },
-        ),
-      },
-      {
-        label: 'Bồi thường',
-        values: compensationReceipts.reduce(
-          (acc, row) => {
-            acc[classifyReceipt(row)] += 1
-            return acc
-          },
-          { unpaid: 0, paid: 0, valid: 0, invalid: 0 },
-        ),
-      },
+      buildReceiptStat('Đặt cọc', depositReceipts),
+      buildReceiptStat('Hợp đồng', contractReceipts),
+      buildReceiptStat('Trả phòng', returnReceipts),
+      buildReceiptStat('Bồi thường', compensationReceipts),
     ]
 
     const bedCounts = bedRows.reduce(
@@ -253,11 +319,28 @@ export const getManagerDashboard = async (req, res) => {
       },
     ]
 
-    const allReceiptRows = [...depositReceipts, ...contractReceipts, ...returnReceipts, ...compensationReceipts]
-    const pendingApprovalCount = allReceiptRows.filter((row) => classifyReceiptAction(row) === 'pendingApproval').length
-    const needPaymentCount = allReceiptRows.filter((row) => classifyReceiptAction(row) === 'needPayment').length
-    const totalTasks = handoverRows.length + returnRowsCount + pendingApprovalCount + needPaymentCount
-    const taskBreakdown = `phiếu thu chờ duyệt: ${pendingApprovalCount}; lịch bàn giao hôm nay: ${handoverRows.length}; trả phòng & kiểm tra: ${returnRowsCount}; phiếu thu cần thanh toán: ${needPaymentCount}`
+    const allReceiptRows = [
+      ...depositReceipts,
+      ...contractReceipts,
+      ...returnReceipts,
+      ...compensationReceipts,
+    ]
+
+    const pendingApprovalCount = allReceiptRows.filter(
+      row => classifyReceiptAction(row) === 'pendingApproval',
+    ).length
+
+    const needPaymentCount = allReceiptRows.filter(
+      row => classifyReceiptAction(row) === 'needPayment',
+    ).length
+
+    const returnRowsCount = returnRows.length
+
+    const totalTasks =
+      handoverRows.length +
+      returnRowsCount +
+      pendingApprovalCount +
+      needPaymentCount
 
     const summaryCards = [
       {
@@ -289,11 +372,17 @@ export const getManagerDashboard = async (req, res) => {
         bedStats,
         receiptStats,
         description: `Chào mừng trở lại! Hôm nay bạn có ${totalTasks} công việc cần xử lý.`,
+        currentBranch: {
+          ma_cn: maCn,
+          ma_nv: currentEmployee.ma_nv,
+          ten_nv: currentEmployee.ten_nv,
+        },
       },
       message: 'Lấy dữ liệu dashboard thành công',
     })
   } catch (error) {
     console.error('Lỗi khi lấy dữ liệu dashboard:', error)
+
     res.status(500).json({
       success: false,
       message: 'Lỗi khi lấy dữ liệu dashboard',
