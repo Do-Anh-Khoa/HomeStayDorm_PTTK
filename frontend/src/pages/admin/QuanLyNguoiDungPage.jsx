@@ -426,18 +426,20 @@ export default function QuanLyNguoiDungPage() {
   }, [])
 
   const fetchChiNhanh = async () => {
-    try {
-      const res = await api.get('/chi-nhanh')
-      const options = res.data.data.map(cn => ({
-        value: cn.ma_cn,
-        label: `${cn.ma_cn} - ${cn.ten_cn}`,
-      }))
-      setChiNhanhOptions(options)
-    } catch (err) {
-      console.error('Lỗi fetch chi nhánh:', err)
-      showToast('Không thể tải danh sách chi nhánh.', 'error')
-    }
+  try {
+    const res = await api.get('/chi-nhanh')
+
+    const options = res.data.map(cn => ({
+      value: cn.ma_cn,
+      label: `${cn.ma_cn} - ${cn.ten_cn}`,
+    }))
+
+    setChiNhanhOptions(options)
+  } catch (err) {
+    console.error('Lỗi fetch chi nhánh:', err)
+    showToast('Không thể tải danh sách chi nhánh.', 'error')
   }
+}
 
   const handleSearch = (val) => {
     setSearch(val)
