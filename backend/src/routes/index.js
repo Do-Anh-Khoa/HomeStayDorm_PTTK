@@ -17,6 +17,7 @@ import phuTrachDashboardRoutes from './phu-trach-dashboard.routes.js'
 import traCuuPhongGiuongRoutes from './tra-cuu-phong-giuong.routes.js'
 import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
 import boiThuongRoutes from './boi-thuong.routes.js'
+import phieuThuBoiThuongRoutes from './phieuThuBoiThuongRoutes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -37,4 +38,5 @@ router.use('/phu-trach-dashboard', authMiddleware, phuTrachDashboardRoutes)
 router.use('/tra-cuu-phong-giuong', authMiddleware, traCuuPhongGiuongRoutes)
 router.use('/vat-dung-hu-hai', authMiddleware, vatDungHuHaiRoutes)
 router.use('/boi-thuong', authMiddleware, boiThuongRoutes)
+router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
 export default router
