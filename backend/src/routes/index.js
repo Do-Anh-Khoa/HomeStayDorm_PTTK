@@ -10,6 +10,7 @@ import loaiPhongRoutes from './loai-phong.routes.js'
 import phongGiuongRoutes from './phong-giuong.routes.js'
 import quyDinhKtxRoutes from './quy-dinh-ktx.routes.js'
 import vatDungRoutes from './vat-dung.routes.js'
+import dashboardRoutesQly from './dashboard_qly.routes.js'
 import saleDashboardRoutes from './sale-dashboard.routes.js'
 import dashboardRoutes from './dashboard.routes.js'
 const router = Router()
@@ -26,5 +27,6 @@ router.use('/phong-giuong', phongGiuongRoutes)
 router.use('/quy-dinh-ktx', authMiddleware, quyDinhKtxRoutes)
 router.use('/vat-dung', vatDungRoutes)
 router.use('/sale-dashboard', authMiddleware, saleDashboardRoutes)
+router.use('/dashboard-qly', authMiddleware, dashboardRoutesQly)
 router.use('/dashboard', authMiddleware, dashboardRoutes)
 export default router
