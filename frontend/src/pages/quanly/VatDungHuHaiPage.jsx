@@ -350,30 +350,41 @@ export default function VatDungHuHaiPage() {
     fetchVatDungHuHai()
   }, [])
 
-  const filterRows = rows => {
-    const keyword = normalizeText(search)
+  // Lọc danh sách theo mã phòng hoặc mã hồ sơ trả phòng.
+  const filterRows = (rows, searchValue) => {
+    const keyword = normalizeText(searchValue)
 
     if (!keyword) {
       return rows
     }
 
     return rows.filter(row => {
-      return normalizeText(row.ma_phong).includes(keyword)
+      const maPhong = normalizeText(row.ma_phong)
+      const maHstp = normalizeText(row.ma_tp)
+
+      return (
+        maPhong.includes(keyword) ||
+        maHstp.includes(keyword)
+      )
     })
   }
 
+  // Chỉ lọc danh sách hồ sơ đang chờ sau khi nhấn Tìm kiếm hoặc Enter.
   const filteredPendingRows = useMemo(
-    () => filterRows(pendingRows),
+    () => filterRows(pendingRows, appliedSearch),
     [pendingRows, appliedSearch],
   )
 
+  // Áp dụng cùng từ khóa cho danh sách lịch sử ghi nhận.
   const filteredHistoryRows = useMemo(
-    () => filterRows(historyRows),
+    () => filterRows(historyRows, appliedSearch),
     [historyRows, appliedSearch],
   )
+
   const handleSearch = () => {
-    setAppliedSearch(search)
+    setAppliedSearch(search.trim())
   }
+
   const openDetail = async (row, mode) => {
     try {
       const response = await api.get(`/vat-dung-hu-hai/${row.ma_tp}`)
@@ -511,11 +522,11 @@ export default function VatDungHuHaiPage() {
               value={search}
               onChange={event => setSearch(event.target.value)}
               onKeyDown={event => {
-              if (event.key === 'Enter') {
-                handleSearch()
-            }
-            }}
-            placeholder="Nhập mã phòng để tìm kiếm"
+                if (event.key === 'Enter') {
+                  handleSearch()
+                }
+              }}
+            placeholder="Nhập mã phòng hoặc mã hồ sơ trả phòng để tìm kiếm"
             />
           </div>
 
