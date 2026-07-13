@@ -319,6 +319,7 @@ const revertBedsAfterCancel = async (client, maTp, maCn) => {
 export const cancelPtTraPhongPreview = async (req, res, next) => {
   try {
     const maTp = req.params.ma_tp?.trim().toUpperCase()
+// Bước 1: Xác định nhân viên đang đăng nhập và chi nhánh làm việc.
     const currentEmployee = await getCurrentEmployee(req)
 
     if (!maTp) {
@@ -361,7 +362,8 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
   const { updateBeds = false } = options
   const { nameSql, phoneSql } = await getCustomerColumnSql()
   const maCn = currentEmployee.ma_cn
-
+// Bước 2: Lấy thông tin hồ sơ trả phòng, khách hàng,
+// hợp đồng thuê và tiền cọc gốc.
   const headerRows = await client.$queryRaw`
     SELECT
       h.ma_tp,
@@ -408,7 +410,7 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
     error.statusCode = 404
     throw error
   }
-
+// Bước 3: Kiểm tra hồ sơ đã được lập phiếu thu hay chưa.
   const existedRows = await client.$queryRaw`
     SELECT ma_pttp
     FROM pt_tra_phong
@@ -423,6 +425,7 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
   }
 
   const header = headerRows[0]
+// Bước 4: Kiểm tra đây có phải hồ sơ trả phòng cuối cùng của phòng.
   const roomRows = await getRoomRowsByReturn(client, maTp, maCn)
   const roomCodes = roomRows.map(row => row.ma_phong)
 
@@ -434,6 +437,8 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
 
   // Chỉ có HĐT mới xét người cuối và dịch vụ tháng cuối
   if (hasContract && lastReturn) {
+// Bước 5: Nếu là người cuối, lấy dịch vụ tháng cuối chưa thanh toán.
+// Nếu chưa ghi nhận dịch vụ thì dừng quá trình lập phiếu.
     serviceItems = await getUnpaidServiceItemsByRooms(client, roomCodes)
 
     if (serviceItems.length === 0) {
@@ -450,16 +455,19 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
 
   // Chỉ có HĐT mới tính vật dụng hư hại
   if (hasContract) {
+  // Bước 6: Lấy danh sách vật dụng hư hại để tính tiền khấu trừ.
     damageItems = await getDamageItems(client, maTp)
   }
 
   if (updateBeds) {
+  // Bước 7: Chuyển giường sang trạng thái "Đang trả phòng"
+// để tránh người khác tiếp tục sử dụng giường trong lúc xử l
     await updateBedsToReturning(client, maTp, maCn)
   }
-
+// Bước 8: Xác định quy định hoàn cọc theo thời gian thuê.
   const refundRule = getReturnRule(header)
   const ruleInfo = await getRuleInfo(client, refundRule.ma_qdhc)
-
+// Bước 9: Tính tiền hoàn cọc, tiền khấu trừ và tổng quyết toán.
   const tienCocGoc = toNumber(header.tien_coc_goc)
   const tienHoanCoc = Math.round(tienCocGoc * refundRule.ty_le)
 
@@ -714,7 +722,8 @@ export const createPtTraPhong = async (req, res, next) => {
         message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
       })
     }
-
+// Bước 10: Tạo phiếu thu trong transaction
+// để bảo đảm các cập nhật thành công hoặc thất bại cùng nhau.
     const result = await prisma.$transaction(async tx => {
       const data = await buildPreviewData(tx, maTp, currentEmployee, {
         updateBeds: true,
@@ -733,6 +742,7 @@ export const createPtTraPhong = async (req, res, next) => {
         .map(item => item.ma_ct)
         .filter(Boolean)
 
+// Bước 11: Gắn các dịch vụ tháng cuối vào phiếu thu vừa tạo.
       if (serviceIds.length > 0) {
         await tx.$executeRaw`
           UPDATE chi_tiet_dv
@@ -763,7 +773,8 @@ export const createPtTraPhong = async (req, res, next) => {
       },
     })
 
-    // In PDF + gửi email chạy sau, không chặn popup
+// Bước 12: Xuất PDF và gửi email ở chế độ bất đồng bộ,
+// không làm người dùng phải chờ popup thành công.
     setImmediate(async () => {
       try {
         await inPTTraPhong(resultData)
