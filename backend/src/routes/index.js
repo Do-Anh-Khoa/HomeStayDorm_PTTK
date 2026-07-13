@@ -20,6 +20,8 @@ import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
 import boiThuongRoutes from './boi-thuong.routes.js'
 import banGiaoRoutes from './ban-giao.routes.js'
 import keToanDashboardRoutes from './ke-toan-dashboard.routes.js'
+import phieuThuBoiThuongRoutes from './phieuThuBoiThuongRoutes.js'
+import phieuThuDatCocRoutes from './phieuThuDatCocRoutes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
