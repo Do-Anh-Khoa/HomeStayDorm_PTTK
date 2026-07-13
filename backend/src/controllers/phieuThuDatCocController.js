@@ -1,6 +1,6 @@
 // QLPhieuThuDatCocController — tương ứng lớp QLPhieuThuDatCocController
 // trong class diagram. Ráp Entity (PhieuDatCoc, PhieuThuDatCoc, DatCocGiuong)
-// + Utils (GuiMailPTDC, InPTDacCoc) theo use-case "Lập PT đặt cọc" (Hình 92-95).
+// + Utils (GuiMailPTDC, InPTDatCoc) theo use-case "Lập PT đặt cọc".
 
 import PhieuDatCoc from '../entities/PhieuDatCoc.js'
 import PhieuThuDatCoc from '../entities/PhieuThuDatCoc.js'
@@ -9,11 +9,9 @@ import { NhanVienDB } from '../database/HoTroBoiThuongDB.js'
 import { guiEmailYeuCauThanhToan } from '../utils/guiMailPTDC.js'
 import { inPTDatCoc } from '../utils/inPTDatCoc.js'
 
-// ------------------------------------------------------------------
-// Bước 1 (Hình 92): danh sách PDC chưa lập phiếu thu.
+// Bước 1 : danh sách PDC chưa lập phiếu thu.
 // CHỈ lấy các PDC do NV Sale CÙNG CHI NHÁNH với kế toán đang đăng nhập.
 // GET /api/phieu-thu-dat-coc/cho-xu-ly
-// ------------------------------------------------------------------
 export const loadDSPDCChuaLap = async (req, res) => {
   try {
     const nv = req.auth
@@ -32,10 +30,8 @@ export const loadDSPDCChuaLap = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Tìm kiếm theo mã PDC / tên khách hàng (ô search ở Hình 92).
+// Tìm kiếm theo mã PDC / tên khách hàng.
 // GET /api/phieu-thu-dat-coc/cho-xu-ly?tuKhoa=...
-// ------------------------------------------------------------------
 export const timKiemPDC = async (req, res) => {
   try {
     const nv = req.auth
@@ -53,10 +49,8 @@ export const timKiemPDC = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 2 (Hình 93): chọn 1 PDC -> load thông tin, tính tổng tiền cọc.
+// Bước 2: chọn 1 PDC -> load thông tin, tính tổng tiền cọc.
 // GET /api/phieu-thu-dat-coc/lap/:maPDC
-// ------------------------------------------------------------------
 export const loadThongTinLapPTDC = async (req, res) => {
   try {
     const { maPDC } = req.params
@@ -99,13 +93,11 @@ export const loadThongTinLapPTDC = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 2 (tiếp, nút "Tạo Phiếu Thu Đặt Cọc" - Hình 93): tạo phiếu, kiểm
+// Bước 2 (nút "Tạo Phiếu Thu Đặt Cọc" ): tạo phiếu, kiểm
 // tra lại tồn tại (chống race-condition), gửi email. Xuất PDF gọi riêng
 // ở endpoint /pdf — frontend tự gọi ngay sau khi tạo thành công.
 // POST /api/phieu-thu-dat-coc/lap
 // body: { maPDC }
-// ------------------------------------------------------------------
 export const lapVaLuuPTDC = async (req, res) => {
   try {
     const { maPDC } = req.body
@@ -160,11 +152,10 @@ export const lapVaLuuPTDC = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 3 (Hình 94): danh sách PTDC đã lập HÔM NAY, chỉ những phiếu do
+// Bước 3 : danh sách PTDC đã lập HÔM NAY, chỉ những phiếu do
 // CHÍNH nhân viên đang đăng nhập lập.
 // GET /api/phieu-thu-dat-coc/da-lap-hom-nay
-// ------------------------------------------------------------------
+
 export const loadDSPTDCDaLapHomNay = async (req, res) => {
   try {
     const nv = req.auth
@@ -178,10 +169,8 @@ export const loadDSPTDCDaLapHomNay = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 4 (Hình 95): xem chi tiết 1 phiếu thu đặt cọc đã lập.
+// Bước 4 : xem chi tiết 1 phiếu thu đặt cọc đã lập.
 // GET /api/phieu-thu-dat-coc/:maPTDC
-// ------------------------------------------------------------------
 export const xemChiTietPTDC = async (req, res) => {
   try {
     const { maPTDC } = req.params
@@ -197,10 +186,8 @@ export const xemChiTietPTDC = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Nút "In phiếu thu" (Hình 95): xuất PDF, trả file cho client tải về.
+// Nút "In phiếu thu" : xuất PDF, trả file cho client tải về.
 // GET /api/phieu-thu-dat-coc/:maPTDC/pdf
-// ------------------------------------------------------------------
 export const inPhieuThuPDF = async (req, res) => {
   try {
     const { maPTDC } = req.params

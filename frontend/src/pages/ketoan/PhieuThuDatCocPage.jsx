@@ -6,7 +6,7 @@ import { getStoredUser } from '../../services/authSession.js'
 const formatTien = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ'
 const formatNgay = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '')
 const formatGio = (d) => (d ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '')
-// ===== Header dùng chung cho màn Form / Chi tiết (thay cho PageTitle) =====
+//  Header dùng chung cho màn Form / Chi tiết (thay cho PageTitle)
 function SubHeader({ title }) {
   return (
     <div style={S.subHeader}>
@@ -15,10 +15,9 @@ function SubHeader({ title }) {
   )
 }
 
-// ===== Màn hình 1 (Hình 92): Danh sách PDC chờ lập + đã lập hôm nay =====
+// Màn hình 1 : Danh sách PDC chờ lập + đã lập hôm nay 
 function DanhSachPDCChoLap({ dsChoLap, dsDaLap, tuKhoa, setTuKhoa, loading, onChonLap, onXemChiTiet })  {
-  // Lấy thời điểm phiếu thu MỚI NHẤT trong danh sách đã lập hôm nay (không
-  // phải thời điểm gọi API) — dùng ngay của phiếu có ngay lớn nhất.
+  // Lấy thời điểm phiếu thu MỚI NHẤT trong danh sách đã lập hôm nay 
   const phieuMoiNhat = dsDaLap.length > 0
     ? dsDaLap.reduce((moi, pt) => (new Date(pt.ngay) > new Date(moi.ngay) ? pt : moi), dsDaLap[0])
     : null
@@ -115,7 +114,7 @@ function DanhSachPDCChoLap({ dsChoLap, dsDaLap, tuKhoa, setTuKhoa, loading, onCh
   )
 }
 
-// ===== Bảng chi tiết giường đã cọc — dùng chung cho Form và Chi tiết =====
+// Bảng chi tiết giường đã cọc 
 function BangGiuongDaCoc({ dsGiuong }) {
   return (
     <table style={S.table}>
@@ -143,7 +142,7 @@ function BangGiuongDaCoc({ dsGiuong }) {
   )
 }
 
-// ===== Màn hình 2 (Hình 93): Biểu mẫu lập phiếu thu đặt cọc =====
+//  Màn hình 2 : Biểu mẫu lập phiếu thu đặt cọc
 function BieuMauLapPTDC({ thongTin, saving, errorMsg, onHuy, onTao }) {
   return (
     <>
@@ -210,7 +209,7 @@ function FormField({ label, value, highlight }) {
   )
 }
 
-// ===== Màn hình 3 (Hình 95): Xem chi tiết phiếu thu đã lập =====
+//Màn hình 3 : Xem chi tiết phiếu thu đã lập
 function ChiTietPTDC({ pt, onQuayLai, onIn, printing }) {
   return (
     <>
@@ -257,7 +256,7 @@ function ChiTietPTDC({ pt, onQuayLai, onIn, printing }) {
   )
 }
 
-// ===== Trang chính =====
+//  Trang chính
 export default function LapPTDatCocPage() {
   const user = getStoredUser()
   const [view, setView] = useState('list') // 'list' | 'form' | 'detail'
@@ -308,9 +307,9 @@ export default function LapPTDatCocPage() {
     }
   }
 
-  // Tạo phiếu -> gửi mail (backend tự làm, lỗi không chặn) -> xuất PDF ngay.
+  // Tạo phiếu -> gửi mail 
   // Xuất PDF nằm trong try-catch RIÊNG để nếu lỗi cũng không ảnh hưởng đến
-  // việc phiếu đã tạo thành công (giống pattern PT Bồi Thường).
+  // việc phiếu đã tạo thành công.
   const handleTaoPhieu = async () => {
     setSaving(true)
     setErrorMsg('')
@@ -424,7 +423,7 @@ export default function LapPTDatCocPage() {
   )
 }
 
-// Style dùng chung — giữ NGUYÊN VĂN theo trang PT Bồi Thường để đồng bộ giao diện
+// Style dùng chung 
 const S = {
   errMsg: {
     margin: '0 0 18px',

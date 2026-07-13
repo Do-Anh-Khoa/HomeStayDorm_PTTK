@@ -1,6 +1,6 @@
 import prisma from '../config/prisma.js'
 
-// Hệ số đặt cọc: 2 tháng tiền phòng — đã xác nhận với Van.
+// Hệ số đặt cọc: 2 tháng tiền phòng
 export const HE_SO_DAT_COC = 2
 
 class PhieuDatCocDB {
@@ -31,15 +31,13 @@ class PhieuDatCocDB {
     return rows
   }
 
-  // TimKiemPDC(tuKhoa, maCN): PhieuDatCoc[] — dùng chung logic với
-  // LoadDSPDCChuaLap (giống cách BoiThuongDB.TimKiemBBBT gọi lại
-  // LoadDSBTChoXuLy, tránh viết trùng 2 câu SQL gần giống nhau).
+  // TimKiemPDC(tuKhoa, maCN): PhieuDatCoc[] —
   static async TimKiemPDC(tuKhoa, maCN) {
     return this.LoadDSPDCChuaLap(maCN, tuKhoa)
   }
 
   // LoadPDC(maPDC): PhieuDatCoc — kèm tên KH, CCCD, SĐT, tên NV Sale để đổ
-  // sẵn lên biểu mẫu lập phiếu thu (Hình 93).
+  // sẵn lên biểu mẫu lập phiếu thu .
   static async LoadPDC(maPDC) {
     const rows = await prisma.$queryRaw`
       SELECT pdc.ma_pdc AS "maPDC", pdc.ngay_dc AS "ngayDC", pdc.trang_thai AS "trangThai",
@@ -55,9 +53,6 @@ class PhieuDatCocDB {
   }
 
   // LoadPDCTheoKhach(maKH): PhieuDatCoc — PDC gần nhất của 1 khách hàng.
-  // Có trong class diagram nhưng KHÔNG dùng trong luồng tìm kiếm hiện tại —
-  // xem ghi chú ở controller.timKiemPDC (gộp tìm kiếm thành 1 câu SQL duy
-  // nhất thay vì 2 bước Load riêng như sequence diagram vẽ).
   static async LoadPDCTheoKhach(maKH) {
     const rows = await prisma.$queryRaw`
       SELECT pdc.ma_pdc AS "maPDC", pdc.ngay_dc AS "ngayDC", pdc.trang_thai AS "trangThai",

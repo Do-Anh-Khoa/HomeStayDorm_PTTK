@@ -1,6 +1,5 @@
 // InPTDacCoc — tương ứng lớp InPTDacCoc trong class diagram.
 // InPhieuThu(ptdc): boolean — xuất PDF, trả về đường dẫn file.
-// Nhận thẳng object đã load đầy đủ (giống inPTBoiThuong.js).
 import PDFDocument from 'pdfkit'
 import fs from 'fs'
 import path from 'path'

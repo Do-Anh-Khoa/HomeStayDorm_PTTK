@@ -2,9 +2,7 @@ import prisma from '../config/prisma.js'
 
 class DatCocGiuongDB {
   // LoadDSGiuongDaCoc(maPDC): DatCocGiuong[] — kèm sẵn thông tin phòng +
-  // loại phòng (giá thuê/tháng) trong CÙNG 1 JOIN, thay vì gọi riêng
-  // LoadPhong()/LoadLoaiPhong() cho từng giường như sequence diagram vẽ
-  // (tránh N+1 query — cùng cách tối ưu đã làm cho PT Bồi Thường).
+  // loại phòng (giá thuê/tháng)
   static async LoadDSGiuongDaCoc(maPDC) {
     const rows = await prisma.$queryRaw`
       SELECT dcg.ma_pdc AS "maPDC", dcg.ma_phong AS "maPhong", dcg.ma_giuong AS "maGiuong",
