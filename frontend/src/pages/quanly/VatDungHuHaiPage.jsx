@@ -65,6 +65,15 @@ function ReturnRoomTable({
   return (
     <div style={S.tableWrap}>
       <table style={S.table}>
+        <colgroup>
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '24%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '10%' }} />
+        </colgroup>
+
         <thead>
           <tr>
             <th style={S.th}>Mã trả phòng</th>
@@ -72,7 +81,7 @@ function ReturnRoomTable({
             <th style={S.th}>Tên khách hàng</th>
             <th style={S.th}>Ngày trả phòng</th>
             <th style={S.th}>Trạng thái</th>
-            <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
+            <th style={S.th}>Thao tác</th>
           </tr>
         </thead>
 
@@ -84,14 +93,29 @@ function ReturnRoomTable({
           ) : (
             rows.map(row => (
               <tr key={row.ma_tp} style={S.tr}>
-                <td style={S.td}>{row.ma_tp}</td>
-                <td style={S.td}>{row.ma_phong || 'Chưa có phòng'}</td>
-                <td style={S.td}>{row.ten_khach_hang || row.ma_khach_thue}</td>
-                <td style={S.td}>{formatDate(row.ngay_tp)}</td>
+                <td style={S.td}>
+                  <span style={S.ellipsisText}>{row.ma_tp}</span>
+                </td>
+
+                <td style={S.td}>
+                  <span style={S.ellipsisText}>{row.ma_phong || 'Chưa có phòng'}</span>
+                </td>
+
+                <td style={S.td}>
+                  <span style={S.ellipsisText}>
+                    {row.ten_khach_hang || row.ma_khach_thue}
+                  </span>
+                </td>
+
+                <td style={S.td}>
+                  <span style={S.ellipsisText}>{formatDate(row.ngay_tp)}</span>
+                </td>
+
                 <td style={S.td}>
                   <StatusBadge type={type === 'history' ? 'done' : 'pending'} />
                 </td>
-                <td style={{ ...S.td, textAlign: 'center' }}>
+
+                <td style={S.td}>
                   {type === 'history' ? (
                     <button type="button" style={S.btnAction} onClick={() => onViewDetail(row)}>
                       Xem chi tiết
@@ -326,30 +350,41 @@ export default function VatDungHuHaiPage() {
     fetchVatDungHuHai()
   }, [])
 
-  const filterRows = rows => {
-    const keyword = normalizeText(search)
+  // Lọc danh sách theo mã phòng hoặc mã hồ sơ trả phòng.
+  const filterRows = (rows, searchValue) => {
+    const keyword = normalizeText(searchValue)
 
     if (!keyword) {
       return rows
     }
 
     return rows.filter(row => {
-      return normalizeText(row.ma_phong).includes(keyword)
+      const maPhong = normalizeText(row.ma_phong)
+      const maHstp = normalizeText(row.ma_tp)
+
+      return (
+        maPhong.includes(keyword) ||
+        maHstp.includes(keyword)
+      )
     })
   }
 
+  // Chỉ lọc danh sách hồ sơ đang chờ sau khi nhấn Tìm kiếm hoặc Enter.
   const filteredPendingRows = useMemo(
-    () => filterRows(pendingRows),
+    () => filterRows(pendingRows, appliedSearch),
     [pendingRows, appliedSearch],
   )
 
+  // Áp dụng cùng từ khóa cho danh sách lịch sử ghi nhận.
   const filteredHistoryRows = useMemo(
-    () => filterRows(historyRows),
+    () => filterRows(historyRows, appliedSearch),
     [historyRows, appliedSearch],
   )
+
   const handleSearch = () => {
-    setAppliedSearch(search)
+    setAppliedSearch(search.trim())
   }
+
   const openDetail = async (row, mode) => {
     try {
       const response = await api.get(`/vat-dung-hu-hai/${row.ma_tp}`)
@@ -487,11 +522,11 @@ export default function VatDungHuHaiPage() {
               value={search}
               onChange={event => setSearch(event.target.value)}
               onKeyDown={event => {
-              if (event.key === 'Enter') {
-                handleSearch()
-            }
-            }}
-            placeholder="Nhập mã phòng để tìm kiếm"
+                if (event.key === 'Enter') {
+                  handleSearch()
+                }
+              }}
+            placeholder="Nhập mã phòng hoặc mã hồ sơ trả phòng để tìm kiếm"
             />
           </div>
 
@@ -612,19 +647,22 @@ const S = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
+    tableLayout: 'fixed',
   },
 
   th: {
     position: 'sticky',
     top: 0,
     zIndex: 1,
-    padding: '15px 22px',
+    height: '56px',
+    padding: '0 14px',
     backgroundColor: '#f8f9f7',
     color: '#626d56',
-    textAlign: 'left',
+    textAlign: 'center',
     fontSize: '13px',
     fontWeight: 800,
     borderBottom: '1px solid #dde3d8',
+    whiteSpace: 'nowrap',
   },
 
   tr: {
@@ -632,12 +670,20 @@ const S = {
   },
 
   td: {
-    padding: '14px 22px',
+    height: '74px',
+    padding: '0 14px',
     color: '#11160f',
     fontSize: '15px',
     verticalAlign: 'middle',
+    textAlign: 'center',
   },
-
+  ellipsisText: {
+    display: 'block',
+    width: '100%',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+  },
   emptyCell: {
     padding: '28px 24px',
     color: '#7a8372',
@@ -667,9 +713,9 @@ const S = {
   },
 
   btnAction: {
-    minWidth: '96px',
-    height: '38px',
-    padding: '0 16px',
+    minWidth: '108px',
+    height: '42px',
+    padding: '0 14px',
     border: 'none',
     borderRadius: '6px',
     backgroundColor: '#3b4f27',

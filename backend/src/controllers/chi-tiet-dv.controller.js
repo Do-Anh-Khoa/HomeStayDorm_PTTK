@@ -109,6 +109,28 @@ export const ghiNhanDichVu = async (req, res, next) => {
       return res.status(400).json({ message: 'Vui lòng nhập chỉ số mới lớn hơn chỉ số cũ cho ít nhất một dịch vụ.' })
     }
 
+    if (!ngay) {
+      return res.status(400).json({ message: 'Ngày không được để trống.' })
+    }
+    
+    // Parse dd/mm/yyyy
+    const parts = ngay.split('/')
+    let ngayDate
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10)
+      const month = parseInt(parts[1], 10) - 1 // Tháng trong JS từ 0-11
+      const year = parseInt(parts[2], 10)
+      ngayDate = new Date(year, month, day, 12, 0, 0, 0) // Tạo lúc 12 giờ trưa
+    } else {
+      // Thử parse định dạng khác (nếu có)
+      ngayDate = new Date(ngay)
+      ngayDate.setHours(12, 0, 0, 0)
+    }
+    
+    if (isNaN(ngayDate.getTime())) {
+      return res.status(400).json({ message: 'Ngày không hợp lệ. Vui lòng nhập dạng dd/mm/yyyy.' })
+    }
+
     await prisma.$transaction(async (tx) => {
       for (const item of processedItems) {
         await tx.chi_tiet_dv.create({
@@ -118,7 +140,7 @@ export const ghiNhanDichVu = async (req, res, next) => {
             trang_thai: 'Chưa thanh toán',
             ma_dv: item.maDV,
             ma_phong: maPhong,
-            ngay: ngay ? new Date(ngay) : undefined,
+            ngay: ngayDate,
           },
         })
       }
@@ -156,6 +178,13 @@ export const getChoThanhToan = async (req, res, next) => {
     const da = []
 
     for (const r of rows) {
+      let ngayStr = null
+      if (r.ngay) {
+        const day = String(r.ngay.getDate()).padStart(2, '0')
+        const month = String(r.ngay.getMonth() + 1).padStart(2, '0')
+        const year = r.ngay.getFullYear()
+        ngayStr = `${day}/${month}/${year}`
+      }
       const item = {
         maCT: r.ma_ct,
         ten: r.ten || r.ma_dv,
@@ -163,7 +192,7 @@ export const getChoThanhToan = async (req, res, next) => {
         maDV: r.ma_dv,
         donGia: Number(r.don_gia || 0),
         thanhTien: Number(r.thanh_tien || 0),
-        ngay: r.ngay ? r.ngay.toISOString().slice(0, 10) : null,
+        ngay: ngayStr,
       }
 
       if (r.trang_thai === 'Đã thanh toán') da.push(item)
