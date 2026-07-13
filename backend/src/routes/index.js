@@ -5,6 +5,7 @@ import roomRoutes from './room.routes.js'
 import chiNhanhRoutes from './chi-nhanh.routes.js'
 import { authMiddleware } from '../middlewares/authMiddleware.js'
 import dichVuRoutes from './dich-vu.routes.js'
+import chiTietDvRoutes from './chi-tiet-dv.routes.js'
 import quyDinhHoanCocRoutes from './quy-dinh-hoan-coc.routes.js'
 import loaiPhongRoutes from './loai-phong.routes.js'
 import phongGiuongRoutes from './phong-giuong.routes.js'
@@ -19,6 +20,7 @@ router.use('/rooms', authMiddleware, roomRoutes)
 router.use('/phong', authMiddleware, roomRoutes)
 router.use('/chi-nhanh', authMiddleware, chiNhanhRoutes)
 router.use('/dich-vu', dichVuRoutes)
+router.use('/chi-tiet-dv', chiTietDvRoutes)
 router.use('/quy-dinh-hoan-coc', quyDinhHoanCocRoutes)
 router.use('/loai-phong', authMiddleware, loaiPhongRoutes)
 router.use('/phong-giuong', phongGiuongRoutes)
