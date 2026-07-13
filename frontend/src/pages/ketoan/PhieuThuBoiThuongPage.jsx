@@ -5,7 +5,7 @@ import { getStoredUser } from '../../services/authSession.js'
 
 const formatTien = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ'
 const formatNgay = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '')
-
+const formatGio = (d) => (d ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '')
 // Header dùng chung cho màn Form / Chi tiết (thay cho PageTitle) 
 function SubHeader({ title }) {
   return (
@@ -16,6 +16,12 @@ function SubHeader({ title }) {
 }
 // Màn hình 1 : Danh sách biên bản chờ xử lý + đã lập hôm nay
 function DanhSachBTChoXuLy({ dsChoXuLy, dsDaLap, tuKhoa, setTuKhoa, loading, onChonLap, onXemChiTiet }) {
+  // Lấy thời điểm phiếu thu MỚI NHẤT trong danh sách đã lập hôm nay (không
+  // phải thời điểm gọi API) — dùng ngay của phiếu có ngay lớn nhất.
+  const phieuMoiNhat = dsDaLap.length > 0
+    ? dsDaLap.reduce((moi, pt) => (new Date(pt.ngay) > new Date(moi.ngay) ? pt : moi), dsDaLap[0])
+    : null
+
   return (
     <>
       <div style={S.card}>
@@ -73,6 +79,9 @@ function DanhSachBTChoXuLy({ dsChoXuLy, dsDaLap, tuKhoa, setTuKhoa, loading, onC
       <div style={{ ...S.card, marginTop: '18px' }}>
         <div style={S.cardHeadRow}>
           <h3 style={S.cardTitle}>✅ Danh sách Phiếu thu Bồi Thường đã lập hôm nay</h3>
+          {phieuMoiNhat && (
+            <span style={S.updateBadge}>Cập nhật lúc {formatGio(new Date(phieuMoiNhat.ngay))}</span>
+          )}
         </div>
         {dsDaLap.length === 0 ? (
           <p style={S.emptyMsg}>Bạn chưa lập phiếu thu bồi thường nào hôm nay.</p>
@@ -282,6 +291,7 @@ export default function LapPTBoiThuongPage() {
 
   const [dsChoXuLy, setDsChoXuLy] = useState([])
   const [dsDaLap, setDsDaLap] = useState([])
+
   const [thongTinLap, setThongTinLap] = useState(null)
   const [chiTietPT, setChiTietPT] = useState(null)
 
@@ -354,7 +364,7 @@ export default function LapPTBoiThuongPage() {
         alert('Tạo phiếu thu thành công nhưng xuất file PDF thất bại. Bạn có thể xem và in lại ở danh sách đã lập hôm nay.')
       }
     }
-
+    await taiDanhSach(tuKhoa)
     setView('list')
   } catch (err) {
     setErrorMsg(err?.response?.data?.message || 'Không thể tạo phiếu thu bồi thường.')
@@ -536,6 +546,15 @@ const S = {
     color: '#b7791f',
     fontSize: '12.5px',
     fontWeight: 700,
+  },
+  updateBadge: {
+    padding: '4px 12px',
+    borderRadius: '999px',
+    backgroundColor: '#eef1ea',
+    color: '#5c6653',
+    fontSize: '11.5px',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
   },
   badgeSuccess: {
     display: 'inline-block',
