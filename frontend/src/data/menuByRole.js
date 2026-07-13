@@ -26,7 +26,7 @@ export const menuByRole = {
     { label: 'Hồ sơ', path: '/sale/ho-so-dang-ky', icon: FileText },
     { label: 'Lịch hẹn', path: '/sale/lich-xem-phong', icon: CalendarDays },
     { label: 'Phiếu thu', path: '/sale/phieu-thu', icon: Receipt },
-    { label: 'Lập phiếu bồi thường', path: '/sale/phieu-boi-thuong', icon: FilePlus2 },
+    { label: 'Lập phiếu đặt cọc', path: '/sale/phieu-dat-coc', icon: FilePlus2 },
     { label: 'Trả phòng', path: '/sale/tra-phong', icon: LogIn },
   ],
   quanly: [
