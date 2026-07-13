@@ -10,6 +10,7 @@ class PhieuDatCoc {
     this.tenKH = data.tenKH
     this.cccd = data.cccd
     this.sdt = data.sdt
+    this.emailKH = data.emailKH
     this.tenNVSale = data.tenNVSale
   }
 
@@ -36,9 +37,24 @@ class PhieuDatCoc {
   static async KiemTraDuDieuKienLapPTDC(maPDC) {
     return PhieuDatCocDB.KiemTraDuDieuKienLapPTDC(maPDC)
   }
+
   static async CapNhatQuaHan() {
-  return PhieuDatCocDB.CapNhatQuaHan()
-}
+    return PhieuDatCocDB.CapNhatQuaHan()
+  }
+
+  // Cập nhật trạng thái phiếu thu - Sale
+  static async CapNhatCacPhieuQuaHan() {
+    return PhieuDatCocDB.CapNhatCacPhieuQuaHan()
+  }
+
+  static async LayTheoMaDatCoc(maPDC) {
+    const row = await PhieuDatCocDB.LayTheoMaDatCoc(maPDC)
+    return row ? new PhieuDatCoc(row) : null
+  }
+
+  static async CapNhatTrangThaiChoDoiDuyet(maPDC) {
+    return PhieuDatCocDB.CapNhatTrangThaiChoDoiDuyet(maPDC)
+  }
 }
 
 export default PhieuDatCoc

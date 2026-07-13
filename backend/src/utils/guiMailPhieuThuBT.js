@@ -56,8 +56,9 @@ export const guiEmailThongBaoDongPhat = async (ptbt) => {
           <div style="text-align: center; margin: 24px 0;">
             <span style="font-size: 24px; font-weight: bold; color: #c0392b;">${soTienFormat}</span>
           </div>
-          <p>Vui lòng chuyển khoản theo cú pháp: <strong>HSD ${ptbt.maPTDB} &lt;Số điện thoại&gt;</strong>
-             trong vòng 7 ngày kể từ ngày lập phiếu.</p>
+          <p>Vui lòng chuyển khoản theo cú pháp: 
+   <strong>HSD ${ptbt.maPTDB} ${ptbt.sdt}</strong>
+   trong vòng 7 ngày kể từ ngày lập phiếu.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
           <p style="color: #999; font-size: 12px; text-align: center;">© 2026 Homestay Dorm System</p>
         </div>

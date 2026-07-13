@@ -22,6 +22,8 @@ import banGiaoRoutes from './ban-giao.routes.js'
 import keToanDashboardRoutes from './ke-toan-dashboard.routes.js'
 import phieuThuBoiThuongRoutes from './phieuThuBoiThuongRoutes.js'
 import phieuThuDatCocRoutes from './phieuThuDatCocRoutes.js'
+import capNhatPhieuThuQLRoutes from './capNhatPhieuThuQLRoutes.js'
+import capNhatPhieuThuSaleRoutes from './capNhatPhieuThuSaleRoutes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -47,4 +49,7 @@ router.use('/ban-giao', authMiddleware, banGiaoRoutes)
 router.use('/ke-toan', authMiddleware, keToanDashboardRoutes)
 router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
 router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
+router.use('/cap-nhat-phieu-thu-ql', authMiddleware, capNhatPhieuThuQLRoutes)
+router.use('/cap-nhat-phieu-thu-sale', authMiddleware, capNhatPhieuThuSaleRoutes)
+
 export default router
