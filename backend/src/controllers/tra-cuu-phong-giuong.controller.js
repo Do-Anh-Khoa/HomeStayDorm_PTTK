@@ -4,12 +4,29 @@ import prisma from '../config/prisma.js'
 const ROOM_IMAGE =
   'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=900&q=80'
 
-const formatMoneyRange = price => {
-  const number = Number(price)
+const getCurrentEmployee = async req => {
+  const maNv =
+    req.auth?.ma_nv ||
+    req.authSession?.ma_nv ||
+    null
 
-  if (number < 2000000) return 'DUOI_2_TRIEU'
-  if (number <= 3000000) return 'TU_2_DEN_3_TRIEU'
-  return 'TREN_3_TRIEU'
+  if (!maNv) {
+    return null
+  }
+
+  const rows = await prisma.$queryRaw`
+    SELECT
+      nv.ma_nv,
+      nv.ten_nv,
+      nv.ma_cn,
+      cn.ten_cn
+    FROM nhanvien nv
+    JOIN chi_nhanh cn ON cn.ma_cn = nv.ma_cn
+    WHERE nv.ma_nv = ${maNv}
+    LIMIT 1
+  `
+
+  return rows[0] || null
 }
 
 const formatDisplayRoomCode = maPhong => {
@@ -76,13 +93,7 @@ const mapRoomRow = row => {
     suc_chua: Number(row.suc_chua || 0),
     gioi_tinh: row.gioi_tinh,
 
-    // Giá ngoài card phòng
-    gia_nguyen_phong: Number(row.gia_nguyen_phong || 0),
-
-    // Giá giường, dùng cho modal chi tiết
     gia_giuong: Number(row.gia_giuong || 0),
-
-    muc_gia: formatMoneyRange(row.gia_nguyen_phong || row.gia_giuong),
 
     so_giuong: Number(row.so_giuong || 0),
     so_giuong_trong: Number(row.so_giuong_trong || 0),
@@ -95,56 +106,61 @@ const mapRoomRow = row => {
     hinh_anh: ROOM_IMAGE,
     tien_ich: ['WiFi', ...tieuChi].slice(0, 3),
 
-    // Mảng tiêu chí cho frontend lọc checkbox
     tieu_chi: tieuChi,
-
-    // Chuỗi tiêu chí để hiện trong modal
     tieu_chi_text: row.tieu_chi_text || '',
   }
 }
 
 export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
   try {
-    const chiNhanhOptions = await prisma.$queryRaw`
-      SELECT
-        ma_cn AS value,
-        ten_cn AS label
-      FROM chi_nhanh
-      ORDER BY ma_cn ASC
-    `
+    const currentEmployee = await getCurrentEmployee(req)
+
+    if (!currentEmployee?.ma_cn) {
+      return res.status(401).json({
+        message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
+      })
+    }
+
+    const maCn = currentEmployee.ma_cn
 
     const loaiPhongOptions = await prisma.$queryRaw`
-      SELECT
-        ma_loai AS value,
-        ten_loai AS label
-      FROM loai_phong
+      SELECT DISTINCT
+        lp.ma_loai AS value,
+        lp.ten_loai AS label
+      FROM loai_phong lp
+      JOIN phong p ON p.ma_loai = lp.ma_loai
+      WHERE p.chi_nhanh = ${maCn}
       ORDER BY
         CASE
-          WHEN ma_loai = 'NAM_T' THEN 1
-          WHEN ma_loai = 'NU_T' THEN 2
-          WHEN ma_loai = 'NAM_TB' THEN 3
-          WHEN ma_loai = 'NU_TB' THEN 4
-          WHEN ma_loai = 'NAM_CC' THEN 5
-          WHEN ma_loai = 'NU_CC' THEN 6
+          WHEN lp.ma_loai = 'NAM_T' THEN 1
+          WHEN lp.ma_loai = 'NU_T' THEN 2
+          WHEN lp.ma_loai = 'NAM_TB' THEN 3
+          WHEN lp.ma_loai = 'NU_TB' THEN 4
+          WHEN lp.ma_loai = 'NAM_CC' THEN 5
+          WHEN lp.ma_loai = 'NU_CC' THEN 6
           ELSE 99
         END,
-        ma_loai ASC
+        lp.ma_loai ASC
     `
 
     const tieuChiOptions = await prisma.$queryRaw`
       SELECT DISTINCT
-        BTRIM(ten_tc) AS value,
-        BTRIM(ten_tc) AS label
-      FROM tieu_chi
-      WHERE ten_tc IS NOT NULL
-        AND BTRIM(ten_tc) <> ''
+        BTRIM(tc.ten_tc) AS value,
+        BTRIM(tc.ten_tc) AS label
+      FROM tieu_chi tc
+      JOIN phong p ON p.ma_phong = tc.ma_phong
+      WHERE tc.ten_tc IS NOT NULL
+        AND BTRIM(tc.ten_tc) <> ''
+        AND p.chi_nhanh = ${maCn}
       ORDER BY value ASC
     `
 
     res.json({
       chi_nhanh: [
-        { value: '', label: 'Tất cả chi nhánh' },
-        ...chiNhanhOptions,
+        {
+          value: '',
+          label: `${currentEmployee.ten_cn} - ${currentEmployee.ma_cn}`,
+        },
       ],
 
       loai_phong: [
@@ -159,15 +175,14 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
         { value: 'Đang sử dụng', label: 'Đang sử dụng' },
       ],
 
-      // Frontend hiện tại đã bỏ mức giá, nhưng để lại cũng không sao.
-      muc_gia: [
-        { value: '', label: 'Tất cả mức giá' },
-        { value: 'DUOI_2_TRIEU', label: 'Dưới 2 triệu' },
-        { value: 'TU_2_DEN_3_TRIEU', label: 'Từ 2 - 3 triệu' },
-        { value: 'TREN_3_TRIEU', label: 'Trên 3 triệu' },
-      ],
-
       tieu_chi: tieuChiOptions,
+
+      currentBranch: {
+        ma_cn: currentEmployee.ma_cn,
+        ten_cn: currentEmployee.ten_cn,
+        ma_nv: currentEmployee.ma_nv,
+        ten_nv: currentEmployee.ten_nv,
+      },
     })
   } catch (error) {
     next(error)
@@ -176,23 +191,28 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
 
 export const getTraCuuPhongGiuongList = async (req, res, next) => {
   try {
+    const currentEmployee = await getCurrentEmployee(req)
+
+    if (!currentEmployee?.ma_cn) {
+      return res.status(401).json({
+        message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
+      })
+    }
+
+    const maCn = currentEmployee.ma_cn
+
     const {
-      chi_nhanh,
       loai_phong,
       trang_thai,
-      muc_gia,
       tieu_chi,
     } = req.query
 
-    const where = []
+    const where = [
+      Prisma.sql`p.chi_nhanh = ${maCn}`,
+    ]
+
     const selectedCriteria = parseCriteriaQuery(tieu_chi)
 
-    if (chi_nhanh) {
-      where.push(Prisma.sql`p.chi_nhanh = ${chi_nhanh}`)
-    }
-
-    // Frontend gửi mã loại phòng thật:
-    // NAM_T / NU_T / NAM_TB / NU_TB / NAM_CC / NU_CC
     if (loai_phong) {
       where.push(Prisma.sql`p.ma_loai = ${loai_phong}`)
     }
@@ -208,37 +228,21 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
       `)
     }
 
-    // Frontend hiện tại bỏ mức giá, nhưng nếu còn gửi thì backend vẫn xử lý được.
-    if (muc_gia === 'DUOI_2_TRIEU') {
-      where.push(Prisma.sql`lp.gia_nguyen_phong < 2000000`)
-    }
-
-    if (muc_gia === 'TU_2_DEN_3_TRIEU') {
-      where.push(Prisma.sql`
-        lp.gia_nguyen_phong >= 2000000
-        AND lp.gia_nguyen_phong <= 3000000
-      `)
-    }
-
-    if (muc_gia === 'TREN_3_TRIEU') {
-      where.push(Prisma.sql`lp.gia_nguyen_phong > 3000000`)
-    }
-
     if (selectedCriteria.length > 0) {
       where.push(Prisma.sql`
         p.ma_phong IN (
           SELECT tc_filter.ma_phong
           FROM tieu_chi tc_filter
+          JOIN phong p_filter ON p_filter.ma_phong = tc_filter.ma_phong
           WHERE BTRIM(tc_filter.ten_tc) IN (${Prisma.join(selectedCriteria)})
+            AND p_filter.chi_nhanh = ${maCn}
           GROUP BY tc_filter.ma_phong
           HAVING COUNT(DISTINCT BTRIM(tc_filter.ten_tc)) = ${selectedCriteria.length}
         )
       `)
     }
 
-    const whereSql = where.length
-      ? Prisma.sql`WHERE ${Prisma.join(where, ' AND ')}`
-      : Prisma.empty
+    const whereSql = Prisma.sql`WHERE ${Prisma.join(where, ' AND ')}`
 
     const rows = await prisma.$queryRaw`
       SELECT
@@ -247,7 +251,6 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
 
         p.ma_loai,
         lp.ten_loai,
-        lp.gia_nguyen_phong,
         lp.gia_giuong,
 
         ${buildHangPhongSql()} AS hang_phong,
@@ -278,7 +281,6 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
         p.ma_loai,
         lp.ma_loai,
         lp.ten_loai,
-        lp.gia_nguyen_phong,
         lp.gia_giuong,
         p.chi_nhanh,
         cn.ten_cn
@@ -294,6 +296,15 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
 
 export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
   try {
+    const currentEmployee = await getCurrentEmployee(req)
+
+    if (!currentEmployee?.ma_cn) {
+      return res.status(401).json({
+        message: 'Không xác định được chi nhánh của nhân viên đang đăng nhập.',
+      })
+    }
+
+    const maCn = currentEmployee.ma_cn
     const roomCode = req.params.ma_phong?.trim().toUpperCase()
 
     if (!roomCode) {
@@ -309,7 +320,6 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
 
         p.ma_loai,
         lp.ten_loai,
-        lp.gia_nguyen_phong,
         lp.gia_giuong,
 
         ${buildHangPhongSql()} AS hang_phong,
@@ -333,6 +343,7 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
       LEFT JOIN tieu_chi tc ON tc.ma_phong = p.ma_phong
 
       WHERE p.ma_phong = ${roomCode}
+        AND p.chi_nhanh = ${maCn}
 
       GROUP BY
         p.ma_phong,
@@ -340,7 +351,6 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
         p.ma_loai,
         lp.ma_loai,
         lp.ten_loai,
-        lp.gia_nguyen_phong,
         lp.gia_giuong,
         p.chi_nhanh,
         cn.ten_cn
@@ -350,7 +360,7 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
 
     if (rows.length === 0) {
       return res.status(404).json({
-        message: 'Không tìm thấy phòng.',
+        message: 'Không tìm thấy phòng thuộc chi nhánh của bạn.',
       })
     }
 
@@ -363,6 +373,7 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
       JOIN phong p ON p.ma_phong = g.ma_phong
       JOIN loai_phong lp ON lp.ma_loai = p.ma_loai
       WHERE g.ma_phong = ${roomCode}
+        AND p.chi_nhanh = ${maCn}
       ORDER BY g.ma_giuong ASC
     `
 

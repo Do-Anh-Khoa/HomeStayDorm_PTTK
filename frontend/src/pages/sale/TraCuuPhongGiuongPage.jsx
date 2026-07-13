@@ -95,7 +95,7 @@ const normalizeRoom = room => {
 
   return {
     ...room,
-    gia_nguyen_phong: room.gia_nguyen_phong ?? room.gia_giuong,
+    gia_giuong: room.gia_giuong,
     hinh_anh: ROOM_IMAGE,
     tien_ich:
       Array.isArray(room.tien_ich) && room.tien_ich.length > 0
@@ -210,7 +210,7 @@ function RoomCard({ room, onViewDetail }) {
           </div>
 
           <div style={S.priceBox}>
-            <strong>{formatMoneyShort(room.gia_nguyen_phong ?? room.gia_giuong)}</strong>
+            <strong>{formatMoneyShort(room.gia_giuong)}</strong>
             <span>/THÁNG</span>
           </div>
         </div>
@@ -875,6 +875,9 @@ const S = {
     overflowY: 'auto',
     overflowX: 'hidden',
     borderTop: '1px solid #eef0eb',
+  // đẩy thanh cuộn nhích qua phải
+  marginRight: '-14px',
+  paddingRight: '14px',
   },
 
   modalTable: {
