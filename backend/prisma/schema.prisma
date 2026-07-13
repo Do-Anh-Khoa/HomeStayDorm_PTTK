@@ -102,12 +102,15 @@ model ho_so_dang_ky {
   trang_thai                                      String
   chi_nhanh                                       String               @db.VarChar(20)
   khach_hang                                      String               @db.VarChar(20)
+  nv_sale                                         String?              @db.VarChar(20)
   chi_nhanh_ho_so_dang_ky_chi_nhanhTochi_nhanh    chi_nhanh            @relation("ho_so_dang_ky_chi_nhanhTochi_nhanh", fields: [chi_nhanh], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
   khach_hang_ho_so_dang_ky_khach_hangTokhach_hang khach_hang           @relation("ho_so_dang_ky_khach_hangTokhach_hang", fields: [khach_hang], references: [ma_kh], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien                                        nhanvien?            @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   lich_hen_xem_phong                              lich_hen_xem_phong[]
 
   @@index([chi_nhanh], map: "idx_ho_so_dang_ky_chi_nhanh")
   @@index([khach_hang], map: "idx_ho_so_dang_ky_khach_hang")
+  @@index([nv_sale], map: "idx_ho_so_dang_ky_nv_sale")
 }
 
 model ho_so_tra_phong {
@@ -197,7 +200,6 @@ model lich_hen_xem_phong {
 model loai_phong {
   ma_loai            String  @id @db.VarChar(20)
   ten_loai           String
-  gia_nguyen_phong   Decimal @db.Decimal(12, 2)
   gia_giuong         Decimal @db.Decimal(12, 2)
   thoi_han_toi_da    Int
   thoi_han_toi_thieu Int
@@ -220,6 +222,7 @@ model nhanvien {
   ma_cn                                             String               @db.VarChar(20)
   bien_ban_ban_giao                                 bien_ban_ban_giao[]
   boi_thuong                                        boi_thuong[]
+  ho_so_dang_ky                                     ho_so_dang_ky[]
   ho_so_tra_phong                                   ho_so_tra_phong[]
   hop_dong_thue                                     hop_dong_thue[]
   lich_hen_tra_phong                                lich_hen_tra_phong[]
@@ -234,6 +237,7 @@ model nhanvien {
   pt_hop_dong                                       pt_hop_dong[]
   pt_tra_phong_pt_tra_phong_nv_cap_nhatTonhanvien   pt_tra_phong[]       @relation("pt_tra_phong_nv_cap_nhatTonhanvien")
   pt_tra_phong                                      pt_tra_phong[]
+  vat_dung_hu_hai                                   vat_dung_hu_hai[]
 
   @@index([ma_cn], map: "idx_nhanvien_ma_cn")
 }
@@ -396,7 +400,9 @@ model vat_dung_hu_hai {
   ma_tp           String          @db.VarChar(20)
   ma_vd           String          @db.VarChar(20)
   ma_bb           String          @db.VarChar(20)
+  ma_nv           String          @db.VarChar(20)
   sl_hu_hai       Int
+  nhanvien        nhanvien        @relation(fields: [ma_nv], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   ho_so_tra_phong ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: Cascade, onUpdate: NoAction)
   vd_bg           vd_bg           @relation(fields: [ma_vd, ma_bb], references: [ma_vd, ma_bb], onDelete: NoAction, onUpdate: NoAction)
 
