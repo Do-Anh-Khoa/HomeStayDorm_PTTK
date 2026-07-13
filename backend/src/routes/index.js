@@ -18,6 +18,7 @@ import traCuuPhongGiuongRoutes from './tra-cuu-phong-giuong.routes.js'
 import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
 import boiThuongRoutes from './boi-thuong.routes.js'
 import banGiaoRoutes from './ban-giao.routes.js'
+import keToanDashboardRoutes from './ke-toan-dashboard.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -39,4 +40,5 @@ router.use('/tra-cuu-phong-giuong', authMiddleware, traCuuPhongGiuongRoutes)
 router.use('/vat-dung-hu-hai', authMiddleware, vatDungHuHaiRoutes)
 router.use('/boi-thuong', authMiddleware, boiThuongRoutes)
 router.use('/ban-giao', authMiddleware, banGiaoRoutes)
+router.use('/ke-toan', authMiddleware, keToanDashboardRoutes)
 export default router
