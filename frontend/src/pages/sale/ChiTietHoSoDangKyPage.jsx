@@ -9,7 +9,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { fetchHoSoDangKyDetail } from '../../services/hoSoDangKy.js'
+import { fetchHoSoDangKyDetail, cancelHoSoDangKy } from '../../services/hoSoDangKy.js'
 
 const STATUS_STYLES = {
   'Mới tiếp nhận': 'bg-[#dff0ff] text-[#3f87c7]',
@@ -42,9 +42,15 @@ function DetailRow({ label, value }) {
 export default function ChiTietHoSoDangKyPage() {
   const navigate = useNavigate()
   const { profileId = '' } = useParams()
+  
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+
+  // State quản lý Pop-up Hủy
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [isCanceling, setIsCanceling] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -55,32 +61,90 @@ export default function ChiTietHoSoDangKyPage() {
 
       try {
         const data = await fetchHoSoDangKyDetail(profileId)
-
-        if (isMounted) {
-          setProfile(data)
-        }
+        if (isMounted) setProfile(data)
       } catch (error) {
-        if (isMounted) {
-          setErrorMessage(error.response?.data?.message || 'Không thể tải chi tiết hồ sơ.')
-        }
+        if (isMounted) setErrorMessage(error.response?.data?.message || 'Không thể tải chi tiết hồ sơ.')
       } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
+        if (isMounted) setLoading(false)
       }
     }
 
     loadProfile()
-
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [profileId])
 
   const criteriaList = profile?.criteriaItems || []
 
+  // Hàm xử lý khi bấm nút "Xác nhận" trong pop-up
+  const handleConfirmCancel = async () => {
+    setIsCanceling(true)
+    setErrorMessage('')
+    try {
+      await cancelHoSoDangKy(profileId)
+      setShowConfirmModal(false)
+      setShowSuccessModal(true)
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || 'Lỗi khi hủy hồ sơ')
+      setShowConfirmModal(false) // Ẩn modal xác nhận nếu có lỗi
+    } finally {
+      setIsCanceling(false)
+    }
+  }
+
   return (
-    <section className="space-y-8 pb-8">
+    <section className="relative space-y-8 pb-8">
+      
+      {/* POP-UP XÁC NHẬN HỦY */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e2418]/35 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[480px] rounded-[12px] bg-white text-left shadow-2xl overflow-hidden">
+            <div className="border-b border-[#e2e5dd] px-6 py-4">
+              <h2 className="text-[20px] font-bold text-[#1a202c]">Xác nhận ghi nhận</h2>
+            </div>
+            <div className="px-6 py-6 text-[15px] text-[#4a5568]">
+              Bạn có chắc chắn muốn cập nhật trạng thái “Hủy yêu cầu” cho hồ sơ này không? Hành động này không thể hoàn tác.
+            </div>
+            <div className="bg-[#f8f9fa] px-6 py-4 flex justify-end gap-3 border-t border-[#e2e5dd]">
+              <button 
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isCanceling}
+                className="px-5 py-2 rounded-[6px] border border-[#cbd5e1] bg-white font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={handleConfirmCancel}
+                disabled={isCanceling}
+                className="px-5 py-2 rounded-[6px] bg-[#3b4f27] text-white font-medium hover:bg-[#2d3d1e] transition disabled:opacity-70"
+              >
+                {isCanceling ? 'Đang xử lý...' : 'Xác nhận'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POP-UP THÔNG BÁO THÀNH CÔNG */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e2418]/35 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[400px] rounded-[20px] bg-white p-8 text-center shadow-xl">
+            <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#dcfce7] text-[#16a34a]">
+              <CircleCheck size={36} strokeWidth={2.5} />
+            </div>
+            <h2 className="mt-5 text-[24px] font-bold text-[#1a202c]">Ghi nhận thành công</h2>
+            <p className="mt-2 text-[15px] text-[#64748b]">
+              Trạng thái hồ sơ đã được hệ thống cập nhật thành công.
+            </p>
+            <button
+              onClick={() => navigate('/sale/ho-so-dang-ky')}
+              className="mt-6 w-full rounded-lg bg-[#3f5227] py-3 text-[15px] font-semibold text-white transition hover:bg-[#344420]"
+            >
+              ← Quay lại danh sách
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-[18px] border border-[#e3e5df] bg-white px-6 py-5 shadow-[0_8px_24px_rgba(33,41,21,0.04)] sm:px-8">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="space-y-3">
@@ -101,6 +165,7 @@ export default function ChiTietHoSoDangKyPage() {
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
+              onClick={() => navigate(`/sale/ho-so-dang-ky/chinh-sua/${profileId}`)}
               className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[8px] border border-[#d7dbd1] bg-white px-6 text-[16px] font-semibold text-[#6a7065] transition hover:border-[#b9c2ad] hover:text-[#465c2d]"
             >
               <PencilLine size={18} />
@@ -108,6 +173,7 @@ export default function ChiTietHoSoDangKyPage() {
             </button>
             <button
               type="button"
+              onClick={() => setShowConfirmModal(true)}
               className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[8px] border border-[#efc1bd] bg-[#fff0ef] px-6 text-[16px] font-semibold text-[#d46b64] transition hover:bg-[#ffe5e2]"
             >
               <Trash2 size={18} />

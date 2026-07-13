@@ -20,6 +20,7 @@ import ChiTietHoSoDangKyPage from '../pages/sale/ChiTietHoSoDangKyPage.jsx'
 import TaoHoSoDangKyPage from '../pages/sale/TaoHoSoDangKyPage.jsx'
 import TraCuuPhongGiuongPage from '../pages/sale/TraCuuPhongGiuongPage.jsx'
 import LichXemPhongPage from '../pages/sale/LichXemPhongPage.jsx'
+import ChinhSuaHoSoDangKyPage from '../pages/sale/ChinhSuaHoSoDangKyPage.jsx'
 import PhieuThuSalePage from '../pages/sale/PhieuThuPage.jsx'
 import PhieuDatCocPage from '../pages/sale/PhieuDatCocPage.jsx'
 
@@ -146,6 +147,7 @@ export default function AppRoutes() {
         <Route path="/sale" element={<DashboardSale />} />
         <Route path="/sale/ho-so-dang-ky" element={<HoSoDangKyPage />} />
         <Route path="/sale/ho-so-dang-ky/:profileId" element={<ChiTietHoSoDangKyPage />} />
+        <Route path="/sale/ho-so-dang-ky/chinh-sua/:maDk" element={<ChinhSuaHoSoDangKyPage />} />
         <Route path="/sale/ho-so-dang-ky/tao-moi" element={<TaoHoSoDangKyPage />} />
         <Route path="/sale/tra-cuu-phong-giuong" element={<TraCuuPhongGiuongPage />} />
         <Route path="/sale/lich-xem-phong" element={<LichXemPhongPage />} />

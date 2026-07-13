@@ -278,3 +278,48 @@ export async function getHoSoDangKyListSnapshot({
 export async function getHoSoDangKyDetailSnapshot(maDk) {
   return getHoSoDangKyById(prisma, maDk)
 }
+
+export const updateHoSoDangKyRecord = async (maDk, data) => {
+  
+  return await prisma.$transaction(async (tx) => {
+
+    await tx.khach_hang.update({
+      where: { ma_kh: data.maKhachHang },
+      data: {
+        ten_kh: data.hoTen,
+        sdt: data.soDienThoai,
+        email: data.email,
+        gioi_tinh: data.gioiTinh,
+        cccd: data.cccd,
+        cong_viec: data.ngheNghiep,
+        quoc_tich: data.quocTich,
+      },
+    })
+
+    
+    const updatedHoSo = await tx.ho_so_dang_ky.update({
+      where: { ma_dk: maDk },
+      data: {
+        hinh_thuc_thue: data.hinhThucThue,
+        so_nguoi: parseInt(data.soLuongNguoi, 10), // <--- SỬA CHỖ NÀY
+        thoi_gian_vao: new Date(data.thoiGianVao),
+        thoi_han_thue: parseInt(data.thoiHanThue, 10), // <--- SỬA CHỖ NÀY
+        tieu_chi: data.tieuChi,
+        chi_nhanh: data.chiNhanh,
+      },
+      include: {
+        khach_hang_ho_so_dang_ky_khach_hangTokhach_hang: true,
+      }
+    })
+
+    return updatedHoSo
+  })
+}
+
+
+export const cancelHoSoDangKyRecord = async (maDk) => {
+  return await prisma.ho_so_dang_ky.update({
+    where: { ma_dk: maDk },
+    data: { trang_thai: 'Hủy yêu cầu' }
+  })
+}
