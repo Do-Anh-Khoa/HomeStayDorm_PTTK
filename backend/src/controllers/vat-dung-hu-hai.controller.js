@@ -131,6 +131,7 @@ export const getVatDungHuHaiList = async (req, res, next) => {
     }
 
     const maCn = currentEmployee.ma_cn
+    const maNv = currentEmployee.ma_nv
     const { nameSql, phoneSql } = await getCustomerColumnSql()
 
     const pendingRows = await prisma.$queryRaw`
@@ -148,7 +149,14 @@ export const getVatDungHuHaiList = async (req, res, next) => {
       ${getBaseReturnRoomSql(nameSql, phoneSql, maCn)}
 
       WHERE h.ghi_nhan_hu_hai = TRUE
+        AND DATE(h.ngay_tp) = CURRENT_DATE
         AND ${buildSameBranchExistsSql(maCn)}
+        AND EXISTS (
+          SELECT 1
+          FROM vat_dung_hu_hai vdh
+          WHERE vdh.ma_tp = h.ma_tp
+            AND vdh.ma_nv = ${maNv}
+        )
 
       ORDER BY h.ngay_tp DESC, h.ma_tp DESC
     `
@@ -302,6 +310,7 @@ export const saveVatDungHuHai = async (req, res, next) => {
     }
 
     const maCn = currentEmployee.ma_cn
+    const maNv = currentEmployee.ma_nv
 
     await prisma.$transaction(async tx => {
       const hoSoRows = await tx.$queryRaw`
@@ -310,6 +319,8 @@ export const saveVatDungHuHai = async (req, res, next) => {
           h.ma_hdt
         FROM ho_so_tra_phong h
         WHERE h.ma_tp = ${maTp}
+          AND h.ngay_huy IS NULL
+          AND h.ma_hdt IS NOT NULL
           AND ${buildSameBranchExistsSql(maCn)}
         LIMIT 1
       `
@@ -360,6 +371,8 @@ export const saveVatDungHuHai = async (req, res, next) => {
         JOIN bien_ban_ban_giao bb ON bb.ma_hdt = h.ma_hdt
         JOIN vd_bg vdbg ON vdbg.ma_bb = bb.ma_bb
         WHERE h.ma_tp = ${maTp}
+          AND h.ngay_huy IS NULL
+          AND h.ma_hdt IS NOT NULL
           AND ${buildSameBranchExistsSql(maCn)}
       `
 
@@ -392,11 +405,17 @@ export const saveVatDungHuHai = async (req, res, next) => {
       }
 
       const insertValues = damagedItems.map(item => Prisma.sql`
-        (${maTp}, ${item.ma_vd}, ${item.ma_bb}, ${item.sl_hu_hai})
+        (${maTp}, ${item.ma_vd}, ${item.ma_bb}, ${maNv}, ${item.sl_hu_hai})
       `)
 
       await tx.$executeRaw`
-        INSERT INTO vat_dung_hu_hai (ma_tp, ma_vd, ma_bb, sl_hu_hai)
+        INSERT INTO vat_dung_hu_hai (
+          ma_tp,
+          ma_vd,
+          ma_bb,
+          ma_nv,
+          sl_hu_hai
+        )
         VALUES ${Prisma.join(insertValues)}
       `
 

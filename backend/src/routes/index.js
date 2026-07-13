@@ -20,7 +20,10 @@ import traCuuPhongGiuongRoutes from './tra-cuu-phong-giuong.routes.js'
 import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
 import boiThuongRoutes from './boi-thuong.routes.js'
 import banGiaoRoutes from './ban-giao.routes.js'
+import ptTraPhongRoutes from './pt-tra-phong.routes.js'
 import keToanDashboardRoutes from './ke-toan-dashboard.routes.js'
+import phieuThuBoiThuongRoutes from './phieuThuBoiThuong.routes.js'
+import phieuThuDatCocRoutes from './phieuThuDatCoc.routes.js'
 import phieuThuBoiThuongRoutes from './phieuThuBoiThuongRoutes.js'
 import phieuThuDatCocRoutes from './phieuThuDatCocRoutes.js'
 import hopDongThueRoutes from './hop-dong-thue.routes.js'
@@ -47,6 +50,8 @@ router.use('/tra-cuu-phong-giuong', authMiddleware, traCuuPhongGiuongRoutes)
 router.use('/vat-dung-hu-hai', authMiddleware, vatDungHuHaiRoutes)
 router.use('/boi-thuong', authMiddleware, boiThuongRoutes)
 router.use('/ban-giao', authMiddleware, banGiaoRoutes)
+router.use('/ban-giao', authMiddleware, banGiaoRoutes)
+router.use('/pt-tra-phong', authMiddleware, ptTraPhongRoutes)
 router.use('/ke-toan', authMiddleware, keToanDashboardRoutes)
 router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
 router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
