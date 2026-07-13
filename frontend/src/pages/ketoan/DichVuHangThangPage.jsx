@@ -10,7 +10,6 @@ const formatMoney = (value) => {
 const donViDV = (maDV) => {
   if (maDV === 'DIEN') return 'kWh'
   if (maDV === 'NUOC') return 'm3'
-  if (maDV === 'WIFI') return 'lần'
   return ''
 }
 
