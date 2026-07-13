@@ -8,8 +8,7 @@ class PhieuThuDatCocDB {
     return rows.length > 0
   }
 
-  // LoadPTTheoMaPDC(maPDC): PhieuThuDatCoc — dùng ở bước kiểm tra tồn tại
-  // (sequence 3.4 / 5.3 LoadPTTheoMaPDC).
+  // LoadPTTheoMaPDC(maPDC): PhieuThuDatCoc 
   static async LoadPTTheoMaPDC(maPDC) {
     const rows = await prisma.$queryRaw`
       SELECT ma_ptdc AS "maPTDC", ngay AS "ngay", ngay_thanh_toan AS "ngayThanhToan",
@@ -40,9 +39,7 @@ class PhieuThuDatCocDB {
   return rows[0]
 }
 
-  // LoadPTDC(maPTDC): PhieuThuDatCoc — kèm KH + NV Sale + NV Kế toán, gộp
-  // JOIN cho gọn thay vì gọi riêng LoadPDC()+LoadKH()+LoadNV() như sequence
-  // diagram vẽ (cùng cách tối ưu đã dùng cho PT Bồi Thường).
+  // LoadPTDC(maPTDC): PhieuThuDatCoc — kèm KH + NV Sale + NV Kế toán
   static async LoadPTDC(maPTDC) {
     const rows = await prisma.$queryRaw`
       SELECT ptdc.ma_ptdc         AS "maPTDC",
