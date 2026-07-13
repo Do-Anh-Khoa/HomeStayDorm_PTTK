@@ -5,7 +5,6 @@ import {
   BedDouble,
   CalendarDays,
   Hourglass,
-  MoreVertical,
   Phone,
   UserRoundPlus,
 } from 'lucide-react'
@@ -111,19 +110,19 @@ function SummaryCard({ icon: Icon, title, value, hint, tone }) {
   const styles = CARD_STYLES[tone]
 
   return (
-    <article className="rounded-[24px] border border-[#d9ddd2] bg-white p-6 shadow-[0_10px_30px_rgba(39,56,30,0.05)]">
-      <div className="flex items-start justify-between gap-4">
-        <div className={`grid h-11 w-11 place-items-center rounded-xl ${styles.iconWrap}`}>
+    <article className="rounded-[24px] border border-[#d9ddd2] bg-white p-5 shadow-[0_10px_30px_rgba(39,56,30,0.05)] sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${styles.iconWrap}`}>
           <Icon size={22} strokeWidth={2.1} />
         </div>
-        <span className={`rounded-full px-3 py-1 text-[12px] font-semibold ${styles.pill}`}>
+        <span className={`w-fit rounded-full px-3 py-1 text-[12px] font-semibold ${styles.pill}`}>
           {hint}
         </span>
       </div>
       <p className="mt-5 text-[14px] font-bold uppercase tracking-[0.04em] text-[#707867]">
         {title}
       </p>
-      <p className="mt-2 text-[56px] font-extrabold leading-none tracking-[-0.04em] text-[#181d16]">
+      <p className="mt-2 text-[42px] font-extrabold leading-none tracking-[-0.04em] text-[#181d16] sm:text-[48px] xl:text-[56px]">
         {formatNumber(value)}
       </p>
     </article>
@@ -133,10 +132,10 @@ function SummaryCard({ icon: Icon, title, value, hint, tone }) {
 function SectionCard({ title, action, children, className = '' }) {
   return (
     <section
-      className={`rounded-[28px] border border-[#d9ddd2] bg-white p-6 shadow-[0_12px_34px_rgba(39,56,30,0.06)] ${className}`}
+      className={`rounded-[28px] border border-[#d9ddd2] bg-white p-5 shadow-[0_12px_34px_rgba(39,56,30,0.06)] sm:p-6 ${className}`}
     >
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-[24px] font-extrabold tracking-[-0.02em] text-[#26351d]">{title}</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-[22px] font-extrabold tracking-[-0.02em] text-[#26351d] sm:text-[24px]">{title}</h2>
         {action}
       </div>
       {children}
@@ -232,10 +231,10 @@ export default function DashboardSale() {
         <p className="text-[14px] font-semibold uppercase tracking-[0.1em] text-[#80906c]">
           Sales Dashboard
         </p>
-        <h1 className="mt-2 text-[40px] font-extrabold tracking-[-0.04em] text-[#26351d]">
+        <h1 className="mt-2 text-[30px] font-extrabold tracking-[-0.04em] text-[#26351d] sm:text-[34px] xl:text-[40px]">
           Chào mừng trở lại, {welcomeName}
         </h1>
-        <p className="mt-2 max-w-[780px] text-[18px] leading-relaxed text-[#6d7267]">
+        <p className="mt-2 max-w-[780px] text-[16px] leading-relaxed text-[#6d7267] sm:text-[18px]">
           Theo dõi số giường trống, lịch hẹn đã tạo, hồ sơ mới và phiếu cọc đang xử lý bằng dữ liệu
           thực tế tại {branchName}.
         </p>
@@ -247,7 +246,7 @@ export default function DashboardSale() {
         </div>
       )}
 
-      <div className="grid gap-5 2xl:grid-cols-5 xl:grid-cols-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {summaryCards.map((card) => (
           <SummaryCard
             key={card.key}
@@ -265,12 +264,12 @@ export default function DashboardSale() {
           <div className="mt-10 flex justify-center">
             <div className="relative">
               <div
-                className="h-[210px] w-[210px] rounded-full"
+                className="h-[180px] w-[180px] rounded-full sm:h-[210px] sm:w-[210px]"
                 style={ringStyle}
               />
-              <div className="absolute inset-[18px] grid place-items-center rounded-full bg-white text-center shadow-[inset_0_0_0_1px_rgba(215,220,208,0.95)]">
+              <div className="absolute inset-[16px] grid place-items-center rounded-full bg-white text-center shadow-[inset_0_0_0_1px_rgba(215,220,208,0.95)] sm:inset-[18px]">
                 <div>
-                  <p className="text-[58px] font-extrabold leading-none tracking-[-0.05em] text-[#181d16]">
+                  <p className="text-[46px] font-extrabold leading-none tracking-[-0.05em] text-[#181d16] sm:text-[58px]">
                     {formatNumber(dashboard.roomStatus.total)}
                   </p>
                   <p className="mt-2 text-[14px] font-bold uppercase tracking-[0.08em] text-[#919988]">
@@ -309,55 +308,49 @@ export default function DashboardSale() {
             </Link>
           }
         >
-          <div className="mt-6 overflow-hidden rounded-[22px] border border-[#ebeee6]">
-            <div className="grid grid-cols-[120px_minmax(200px,1fr)_180px_150px_52px] items-center gap-4 border-b border-[#ecefe8] bg-[#fafbf8] px-6 py-4 text-[14px] font-bold text-[#71796a]">
-              <span>Thời gian</span>
-              <span>Khách hàng</span>
-              <span>Số điện thoại</span>
-              <span>Trạng thái</span>
-              <span />
+          <div className="mt-6 overflow-x-auto">
+            <div className="min-w-[770px] overflow-hidden rounded-[22px] border border-[#ebeee6]">
+              <div className="grid grid-cols-[120px_240px_180px_150px] items-center gap-4 border-b border-[#ecefe8] bg-[#fafbf8] px-6 py-4 text-[14px] font-bold text-[#71796a]">
+                <span>Thời gian</span>
+                <span>Khách hàng</span>
+                <span>Số điện thoại</span>
+                <span>Trạng thái</span>
+              </div>
+
+              {dashboard.appointments.length === 0 && (
+                <div className="px-6 py-16 text-center">
+                  <p className="text-[18px] font-semibold text-[#36422d]">
+                    {loading ? 'Đang tải lịch hẹn...' : 'Chưa có lịch hẹn nào trong dữ liệu hiện tại.'}
+                  </p>
+                  <p className="mt-2 text-[15px] text-[#7a8272]">
+                    Khi có lịch hẹn mới, hệ thống sẽ hiển thị các bản ghi gần nhất để Sale theo dõi.
+                  </p>
+                </div>
+              )}
+
+              {dashboard.appointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className="grid grid-cols-[120px_240px_180px_150px] items-center gap-4 border-b border-[#ecefe8] px-6 py-5 last:border-b-0"
+                >
+                  <span className="text-[18px] font-bold text-[#5e6458]">
+                    {formatDateTime(appointment.time)}
+                  </span>
+                  <span className="text-[20px] font-bold text-[#384530]">
+                    {appointment.customerName}
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-[17px] font-semibold text-[#6a7263]">
+                    <Phone size={16} />
+                    {appointment.phone}
+                  </span>
+                  <span
+                    className={`inline-flex w-fit rounded-full px-4 py-2 text-[14px] font-semibold ${getStatusClass(appointment.status.tone)}`}
+                  >
+                    {appointment.status.label}
+                  </span>
+                </div>
+              ))}
             </div>
-
-            {dashboard.appointments.length === 0 && (
-              <div className="px-6 py-16 text-center">
-                <p className="text-[18px] font-semibold text-[#36422d]">
-                  {loading ? 'Đang tải lịch hẹn...' : 'Chưa có lịch hẹn nào trong dữ liệu hiện tại.'}
-                </p>
-                <p className="mt-2 text-[15px] text-[#7a8272]">
-                  Khi có lịch hẹn mới, hệ thống sẽ hiển thị các bản ghi gần nhất để Sale theo dõi.
-                </p>
-              </div>
-            )}
-
-            {dashboard.appointments.map((appointment) => (
-              <div
-                key={appointment.id}
-                className="grid grid-cols-[120px_minmax(200px,1fr)_180px_150px_52px] items-center gap-4 border-b border-[#ecefe8] px-6 py-5 last:border-b-0"
-              >
-                <span className="text-[18px] font-bold text-[#5e6458]">
-                  {formatDateTime(appointment.time)}
-                </span>
-                <span className="text-[20px] font-bold text-[#384530]">
-                  {appointment.customerName}
-                </span>
-                <span className="inline-flex items-center gap-2 text-[17px] font-semibold text-[#6a7263]">
-                  <Phone size={16} />
-                  {appointment.phone}
-                </span>
-                <span
-                  className={`inline-flex w-fit rounded-full px-4 py-2 text-[14px] font-semibold ${getStatusClass(appointment.status.tone)}`}
-                >
-                  {appointment.status.label}
-                </span>
-                <button
-                  type="button"
-                  className="grid h-10 w-10 place-items-center rounded-full text-[#6b7264] transition hover:bg-[#f1f4ec] hover:text-[#27351d]"
-                  aria-label={`Thao tác cho lịch hẹn ${appointment.id}`}
-                >
-                  <MoreVertical size={18} />
-                </button>
-              </div>
-            ))}
           </div>
         </SectionCard>
       </div>
