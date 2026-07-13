@@ -10,6 +10,8 @@ import {
   getHoSoDangKyDetailSnapshot,
   getHoSoDangKyFormSnapshot,
   getHoSoDangKyListSnapshot,
+  updateHoSoDangKyRecord, 
+  cancelHoSoDangKyRecord  
 } from '../database/ho-so-dang-ky.database.js'
 
 export async function getHoSoDangKyFormOptions(req, res, next) {
@@ -70,6 +72,64 @@ export async function getHoSoDangKyDetail(req, res, next) {
     }
 
     res.json(buildHoSoDangKyDetailEntity(record))
+  } catch (error) {
+    next(error)
+  }
+}
+export async function updateHoSoDangKy(req, res, next) {
+  try {
+    const { maDk } = req.params
+    const inputData = req.body
+
+    
+    const existingRecord = await getHoSoDangKyDetailSnapshot(maDk)
+    if (!existingRecord) {
+      return res.status(404).json({ message: 'Không tìm thấy hồ sơ đăng ký.' })
+    }
+
+    if (existingRecord.trang_thai !== 'Mới tiếp nhận') {
+      return res.status(400).json({ 
+        message: 'Chỉ được phép chỉnh sửa hồ sơ ở trạng thái Mới tiếp nhận.' 
+      })
+    }
+
+    
+    inputData.maKhachHang = existingRecord.khach_hang
+
+    const updatedRecord = await updateHoSoDangKyRecord(maDk, inputData)
+
+    res.json({
+      message: 'Cập nhật hồ sơ thành công.',
+      data: updatedRecord
+    })
+  } catch (error) {
+    if (error.code === 'P2002') {
+      error.status = 409
+      error.message = 'CCCD hoặc email đã bị trùng với khách hàng khác.'
+    }
+    next(error)
+  }
+}
+
+export async function cancelHoSoDangKy(req, res, next) {
+  try {
+    const { maDk } = req.params
+    
+    const existingRecord = await getHoSoDangKyDetailSnapshot(maDk)
+    if (!existingRecord) {
+      return res.status(404).json({ message: 'Không tìm thấy hồ sơ đăng ký.' })
+    }
+
+    if (existingRecord.trang_thai === 'Hủy yêu cầu') {
+      return res.status(400).json({ message: 'Hồ sơ này đã được hủy trước đó.' })
+    }
+
+
+    
+
+    await cancelHoSoDangKyRecord(maDk)
+
+    res.json({ message: 'Đã hủy hồ sơ đăng ký thành công.' })
   } catch (error) {
     next(error)
   }
