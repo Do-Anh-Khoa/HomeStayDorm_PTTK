@@ -1,9 +1,34 @@
 import nodemailer from 'nodemailer'
+import dns from 'dns/promises'
+
+/**
+ * Kiểm tra domain của email có bản ghi MX hợp lệ hay không, TRƯỚC khi gọi
+ * sendMail. Lưu ý: một số nhà mạng ở VN trả DNS "wildcard" cho domain
+ * không tồn tại (trả về 1 bản ghi MX với exchange rỗng thay vì báo lỗi
+ * NXDOMAIN chuẩn) — nên phải lọc bỏ các bản ghi exchange rỗng, không chỉ
+ * kiểm tra length > 0.
+ */
+async function kiemTraDomainNhanMail(email) {
+  try {
+    const domain = String(email).split('@')[1]
+    if (!domain) return false
+    const mxRecords = await dns.resolveMx(domain)
+    return mxRecords.some((mx) => mx.exchange && mx.exchange.trim() !== '')
+  } catch {
+    return false
+  }
+}
 
 /**
  * GuiMailPhieuThuBT — tương ứng lớp GuiMailPhieuThuBT trong class diagram.
  */
 export const guiEmailThongBaoDongPhat = async (ptbt) => {
+  const domainHopLe = await kiemTraDomainNhanMail(ptbt.email)
+  if (!domainHopLe) {
+    console.error(`Gửi email thất bại: domain của "${ptbt.email}" không tồn tại hoặc không nhận được mail.`)
+    return false
+  }
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -18,7 +43,7 @@ export const guiEmailThongBaoDongPhat = async (ptbt) => {
   try {
     await transporter.sendMail({
       from: `"Homestay Dorm System" <${process.env.EMAIL_USER}>`,
-      to: ptbt.emailKH,
+      to: ptbt.email,
       subject: `Thông báo đóng phạt bồi thường - Phiếu thu ${ptbt.maPTDB}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto; padding: 24px; border: 1px solid #e0e0e0; border-radius: 12px;">
@@ -31,7 +56,8 @@ export const guiEmailThongBaoDongPhat = async (ptbt) => {
           <div style="text-align: center; margin: 24px 0;">
             <span style="font-size: 24px; font-weight: bold; color: #c0392b;">${soTienFormat}</span>
           </div>
-          <p>Vui lòng thanh toán trong vòng 7 ngày kể từ ngày lập phiếu theo quy định của ký túc xá.</p>
+          <p>Vui lòng chuyển khoản theo cú pháp: <strong>HSD ${ptbt.maPTDB} &lt;Số điện thoại&gt;</strong>
+             trong vòng 7 ngày kể từ ngày lập phiếu.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
           <p style="color: #999; font-size: 12px; text-align: center;">© 2026 Homestay Dorm System</p>
         </div>

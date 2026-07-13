@@ -15,23 +15,23 @@ class PhieuThuBoiThuongDB {
   // ThemPTBT({ maBT, tongTien, nvKeToan }): PhieuThuBoiThuong — tạo mới
   // trạng thái mặc định "Chưa thanh toán"
   static async ThemPTBT({ maBT, tongTien, nvKeToan }) {
-  const rows = await prisma.$queryRaw`
-    INSERT INTO pt_boi_thuong
-      (ngay, trang_thai, tong_tien, nv_ke_toan, nv_cap_nhat, ma_bt)
-    VALUES
-      (CURRENT_TIMESTAMP, 'Chưa thanh toán', ${tongTien}, ${nvKeToan}, ${nvKeToan}, ${maBT})
-    RETURNING ma_ptdb         AS "maPTDB",
-              ngay            AS "ngay",
-              ngay_thanh_toan AS "ngayThanhToan",
-              ghi_chu         AS "ghiChu",
-              trang_thai      AS "trangThai",
-              tong_tien       AS "tongTien",
-              nv_ke_toan      AS "maNVKeToan",
-              nv_cap_nhat     AS "maNVCapNhat",
-              ma_bt           AS "maBT"
-  `
-  return rows[0]
-}
+    const rows = await prisma.$queryRaw`
+      INSERT INTO pt_boi_thuong
+        (ngay, trang_thai, tong_tien, nv_ke_toan, nv_cap_nhat, ma_bt)
+      VALUES
+        (CURRENT_TIMESTAMP, 'Chưa thanh toán', ${tongTien}, ${nvKeToan}, NULL, ${maBT})
+      RETURNING ma_ptdb         AS "maPTDB",
+                ngay            AS "ngay",
+                ngay_thanh_toan AS "ngayThanhToan",
+                ghi_chu         AS "ghiChu",
+                trang_thai      AS "trangThai",
+                tong_tien       AS "tongTien",
+                nv_ke_toan      AS "maNVKeToan",
+                nv_cap_nhat     AS "maNVCapNhat",
+                ma_bt           AS "maBT"
+    `
+    return rows[0]
+  }
 
 // LoadPTBT(maPTDB): PhieuThuBoiThuong — kèm thông tin khách hàng để gửi mail/in PDF
 static async LoadPTBT(maPTDB) {
