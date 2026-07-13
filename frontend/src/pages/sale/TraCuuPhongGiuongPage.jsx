@@ -63,6 +63,29 @@ const formatMoney = value => {
   return new Intl.NumberFormat('vi-VN').format(number)
 }
 
+const formatTermRange = room => {
+  const min = Number(room?.thoi_han_toi_thieu || 0)
+  const max = Number(room?.thoi_han_toi_da || 0)
+
+  if (!min && !max) {
+    return 'Chưa có'
+  }
+
+  if (min && max && min === max) {
+    return `${min} tháng`
+  }
+
+  if (min && max) {
+    return `${min} - ${max} tháng`
+  }
+
+  if (min) {
+    return `Từ ${min} tháng`
+  }
+
+  return `Tối đa ${max} tháng`
+}
+
 const getCriteriaArray = room => {
   if (Array.isArray(room?.tieu_chi)) {
     return room.tieu_chi
@@ -95,7 +118,9 @@ const normalizeRoom = room => {
 
   return {
     ...room,
-    gia_giuong: room.gia_giuong,
+    gia_giuong: Number(room.gia_giuong || 0),
+    thoi_han_toi_thieu: Number(room.thoi_han_toi_thieu || 0),
+    thoi_han_toi_da: Number(room.thoi_han_toi_da || 0),
     hinh_anh: ROOM_IMAGE,
     tien_ich:
       Array.isArray(room.tien_ich) && room.tien_ich.length > 0
@@ -143,6 +168,10 @@ function RoomDetailModal({ room, onClose }) {
 
         <div style={S.criteriaLine}>
           <strong>Tiêu chí:</strong> {getCriteriaText(room)}
+        </div>
+
+        <div style={S.criteriaLine}>
+          <strong>Thời hạn thuê:</strong> {formatTermRange(room)}
         </div>
 
         <div style={S.modalTableWrap}>
@@ -207,6 +236,7 @@ function RoomCard({ room, onViewDetail }) {
           <div style={S.roomInfo}>
             <h3 style={S.roomCode}>{room.ten_hien_thi || room.ma_phong}</h3>
             <p style={S.roomType}>Loại: {room.ten_loai}</p>
+            <p style={S.roomTerm}>Thời hạn: {formatTermRange(room)}</p>
           </div>
 
           <div style={S.priceBox}>
@@ -266,15 +296,15 @@ export default function TraCuuPhongGiuongPage() {
   }
 
   const filteredRooms = useMemo(() => {
-    if (appliedCriteria.length === 0) {
-      return rooms
-    }
+  if (appliedCriteria.length === 0) {
+    return rooms
+  }
 
-    return rooms.filter(room => {
-      const roomCriteria = getCriteriaArray(room)
-      return appliedCriteria.every(item => roomCriteria.includes(item))
-    })
-  }, [rooms, appliedCriteria])
+  return rooms.filter(room => {
+    const roomCriteria = getCriteriaArray(room)
+    return appliedCriteria.some(item => roomCriteria.includes(item))
+  })
+}, [rooms, appliedCriteria])
 
   const fetchOptions = async () => {
     setLoadingOptions(true)
@@ -297,53 +327,59 @@ export default function TraCuuPhongGiuongPage() {
     }
   }
 
-  const fetchRooms = async (currentFilters = filters, currentCriteria = criteria) => {
-    setLoadingRooms(true)
+  const fetchRooms = async (
+  currentFilters = filters,
+  currentCriteria = criteria,
+  currentSearch = search,
+) => {
+  setLoadingRooms(true)
 
-    try {
-      const params = {}
+  try {
+    const params = {}
 
-      if (currentFilters.chi_nhanh) {
-        params.chi_nhanh = currentFilters.chi_nhanh
-      }
-
-      if (currentFilters.loai_phong) {
-        params.loai_phong = currentFilters.loai_phong
-      }
-
-      if (currentFilters.trang_thai) {
-        params.trang_thai = currentFilters.trang_thai
-      }
-
-      if (currentCriteria.length > 0) {
-        params.tieu_chi = currentCriteria.join(',')
-      }
-
-      const response = await api.get('/tra-cuu-phong-giuong', {
-        params,
-      })
-
-      const data = Array.isArray(response.data) ? response.data : []
-
-      setRooms(data.map(normalizeRoom))
-      setAppliedCriteria(currentCriteria)
-    } catch (error) {
-      console.error(error)
-      window.alert('Không thể tải danh sách phòng/giường.')
-    } finally {
-      setLoadingRooms(false)
+    if (currentSearch.trim()) {
+      params.search = currentSearch.trim()
     }
+
+    if (currentFilters.chi_nhanh) {
+      params.chi_nhanh = currentFilters.chi_nhanh
+    }
+
+    if (currentFilters.loai_phong) {
+      params.loai_phong = currentFilters.loai_phong
+    }
+
+    if (currentFilters.trang_thai) {
+      params.trang_thai = currentFilters.trang_thai
+    }
+
+    if (currentCriteria.length > 0) {
+      params.tieu_chi = currentCriteria.join(',')
+    }
+
+    const response = await api.get('/tra-cuu-phong-giuong', {
+      params,
+    })
+
+    const data = Array.isArray(response.data) ? response.data : []
+
+    setRooms(data.map(normalizeRoom))
+    setAppliedCriteria(currentCriteria)
+  } catch (error) {
+    console.error(error)
+    window.alert('Không thể tải danh sách phòng/giường.')
+  } finally {
+    setLoadingRooms(false)
   }
+}
 
   useEffect(() => {
     fetchOptions()
-    fetchRooms(DEFAULT_FILTERS, [])
+    fetchRooms(DEFAULT_FILTERS, [], '')
   }, [])
 
   const handleSearch = () => {
-    // Giai đoạn này chỉ xử lý combobox/checkbox.
-    // Search theo mã HSDK sẽ nối backend sau.
-    fetchRooms(filters, criteria)
+    fetchRooms(filters, criteria, search)
   }
 
   const handleViewDetail = async room => {
@@ -385,7 +421,7 @@ export default function TraCuuPhongGiuongPage() {
                   handleSearch()
                 }
               }}
-              placeholder="Nhập mã hồ sơ đăng ký, CCCD, tên khách hàng hoặc số điện thoại"
+              placeholder="Nhập mã hồ sơ đăng ký hoặc mã phòng"
             />
           </div>
 
@@ -734,8 +770,19 @@ const S = {
 
   roomType: {
     margin: '4px 0 0',
-    color: '#3f463b',
-    fontSize: '12px',
+    color: '#6c7468',
+    fontSize: '11px',
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+
+  roomTerm: {
+    margin: '3px 0 0',
+    color: '#6c7468',
+    fontSize: '11px',
+    fontWeight: 700,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -864,12 +911,11 @@ const S = {
   },
 
   criteriaLine: {
-    margin: '12px 0 8px',
+    margin: '6px 0',
     color: '#4e574a',
     fontSize: '13px',
-    lineHeight: 1.4,
+    lineHeight: 1.35,
   },
-
   modalTableWrap: {
     maxHeight: '48vh',
     overflowY: 'auto',
