@@ -26,7 +26,7 @@ export const menuByRole = {
     { label: 'Hồ sơ', path: '/sale/ho-so-dang-ky', icon: FileText },
     { label: 'Lịch hẹn', path: '/sale/lich-xem-phong', icon: CalendarDays },
     { label: 'Phiếu thu', path: '/sale/phieu-thu', icon: Receipt },
-    { label: 'Lập phiếu đặt cọc', path: '/sale/phieu-dat-coc', icon: FilePlus2 },
+    { label: 'Lập phiếu bồi thường', path: '/sale/phieu-boi-thuong', icon: FilePlus2 },
     { label: 'Trả phòng', path: '/sale/tra-phong', icon: LogIn },
   ],
   quanly: [
@@ -40,7 +40,10 @@ export const menuByRole = {
   ],
   ketoan: [
     { label: 'Trang chủ', path: '/ke-toan', icon: LayoutDashboard },
-    { label: 'Lập phiếu thu', path: '/ke-toan/phieu-thu', icon: Receipt },
+    { label: 'Lập phiếu thu đặt cọc', path: '/ke-toan/phieu-thu-dat-coc', icon: Receipt },
+    { label: 'Lập phiếu thu hợp đồng', path: '/ke-toan/phieu-thu-hop-dong', icon: Receipt },
+    { label: 'Lập phiếu thu trả phòng', path: '/ke-toan/phieu-thu-tra-phong', icon: Receipt },
+    { label: 'Lập phiếu thu bồi thường', path: '/ke-toan/phieu-thu-boi-thuong', icon: Receipt },
     { label: 'Xử lý dịch vụ', path: '/ke-toan/dich-vu-hang-thang', icon: FileText },
   ],
   phutrach: [

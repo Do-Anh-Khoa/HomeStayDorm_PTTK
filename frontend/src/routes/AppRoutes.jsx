@@ -16,6 +16,8 @@ import NotFoundPage from '../pages/NotFoundPage.jsx'
 
 import DashboardSale from '../pages/sale/DashboardSale.jsx'
 import HoSoDangKyPage from '../pages/sale/HoSoDangKyPage.jsx'
+import ChiTietHoSoDangKyPage from '../pages/sale/ChiTietHoSoDangKyPage.jsx'
+import TaoHoSoDangKyPage from '../pages/sale/TaoHoSoDangKyPage.jsx'
 import TraCuuPhongGiuongPage from '../pages/sale/TraCuuPhongGiuongPage.jsx'
 import LichXemPhongPage from '../pages/sale/LichXemPhongPage.jsx'
 import PhieuThuSalePage from '../pages/sale/PhieuThuPage.jsx'
@@ -31,7 +33,10 @@ import CapNhatPhieuThuPage from '../pages/quanly/CapNhatPhieuThuPage.jsx'
 import BoiThuongPage from '../pages/quanly/BoiThuongPage.jsx'
 
 import DashboardKeToan from '../pages/ketoan/DashboardKeToan.jsx'
-import PhieuThuPage from '../pages/ketoan/PhieuThuPage.jsx'
+import PhieuThuBoiThuongPage from '../pages/ketoan/PhieuThuBoiThuongPage.jsx'
+import PhieuThuHopDongPage from '../pages/ketoan/PhieuThuHopDongPage.jsx'
+import PhieuThuTraPhongPage from '../pages/ketoan/PhieuThuTraPhongPage.jsx'
+import PhieuThuDatCocPage from '../pages/ketoan/PhieuThuDatCocPage.jsx'
 import DichVuHangThangPage from '../pages/ketoan/DichVuHangThangPage.jsx'
 import XacNhanThanhToanPage from '../pages/ketoan/XacNhanThanhToanPage.jsx'
 
@@ -140,6 +145,8 @@ export default function AppRoutes() {
       >
         <Route path="/sale" element={<DashboardSale />} />
         <Route path="/sale/ho-so-dang-ky" element={<HoSoDangKyPage />} />
+        <Route path="/sale/ho-so-dang-ky/:profileId" element={<ChiTietHoSoDangKyPage />} />
+        <Route path="/sale/ho-so-dang-ky/tao-moi" element={<TaoHoSoDangKyPage />} />
         <Route path="/sale/tra-cuu-phong-giuong" element={<TraCuuPhongGiuongPage />} />
         <Route path="/sale/lich-xem-phong" element={<LichXemPhongPage />} />
         <Route path="/sale/phieu-thu" element={<PhieuThuSalePage />} />
@@ -174,7 +181,10 @@ export default function AppRoutes() {
         }
       >
         <Route path="/ke-toan" element={<DashboardKeToan />} />
-        <Route path="/ke-toan/phieu-thu" element={<PhieuThuPage />} />
+        <Route path="/ke-toan/phieu-thu-dat-coc" element={<PhieuThuDatCocPage />} />
+        <Route path="/ke-toan/phieu-thu-hop-dong" element={<PhieuThuHopDongPage />} />
+        <Route path="/ke-toan/phieu-thu-tra-phong" element={<PhieuThuTraPhongPage />} />
+        <Route path="/ke-toan/phieu-thu-boi-thuong" element={<PhieuThuBoiThuongPage />} />
         <Route path="/ke-toan/dich-vu-hang-thang" element={<DichVuHangThangPage />} />
         <Route path="/ke-toan/xac-nhan-thanh-toan" element={<XacNhanThanhToanPage />} />
       </Route>
