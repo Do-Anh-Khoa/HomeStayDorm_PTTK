@@ -19,6 +19,7 @@ import traCuuPhongGiuongRoutes from './tra-cuu-phong-giuong.routes.js'
 import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
 import boiThuongRoutes from './boi-thuong.routes.js'
 import banGiaoRoutes from './ban-giao.routes.js'
+import ptTraPhongRoutes from './pt-tra-phong.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -41,6 +42,7 @@ router.use('/tra-cuu-phong-giuong', authMiddleware, traCuuPhongGiuongRoutes)
 router.use('/vat-dung-hu-hai', authMiddleware, vatDungHuHaiRoutes)
 router.use('/boi-thuong', authMiddleware, boiThuongRoutes)
 router.use('/ban-giao', authMiddleware, banGiaoRoutes)
-router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
-router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
+//router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
+//router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
+router.use('/pt-tra-phong', authMiddleware, ptTraPhongRoutes)
 export default router
