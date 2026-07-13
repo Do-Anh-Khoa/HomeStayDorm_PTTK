@@ -95,8 +95,12 @@ const mapRoomRow = row => {
 
     gia_giuong: Number(row.gia_giuong || 0),
 
+    gia_giuong: Number(row.gia_giuong || 0),
+
+    thoi_han_toi_thieu: Number(row.thoi_han_toi_thieu || 0),
+    thoi_han_toi_da: Number(row.thoi_han_toi_da || 0),
+
     so_giuong: Number(row.so_giuong || 0),
-    so_giuong_trong: Number(row.so_giuong_trong || 0),
 
     trang_thai:
       Number(row.so_giuong_trong || 0) > 0
@@ -124,12 +128,15 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
     const maCn = currentEmployee.ma_cn
 
     const loaiPhongOptions = await prisma.$queryRaw`
-      SELECT DISTINCT
+      SELECT
         lp.ma_loai AS value,
         lp.ten_loai AS label
       FROM loai_phong lp
       JOIN phong p ON p.ma_loai = lp.ma_loai
       WHERE p.chi_nhanh = ${maCn}
+      GROUP BY
+        lp.ma_loai,
+        lp.ten_loai
       ORDER BY
         CASE
           WHEN lp.ma_loai = 'NAM_T' THEN 1
@@ -144,7 +151,7 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
     `
 
     const tieuChiOptions = await prisma.$queryRaw`
-      SELECT DISTINCT
+      SELECT
         BTRIM(tc.ten_tc) AS value,
         BTRIM(tc.ten_tc) AS label
       FROM tieu_chi tc
@@ -152,7 +159,8 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
       WHERE tc.ten_tc IS NOT NULL
         AND BTRIM(tc.ten_tc) <> ''
         AND p.chi_nhanh = ${maCn}
-      ORDER BY value ASC
+      GROUP BY BTRIM(tc.ten_tc)
+      ORDER BY BTRIM(tc.ten_tc) ASC
     `
 
     res.json({
@@ -185,6 +193,7 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
       },
     })
   } catch (error) {
+    console.error('Lỗi load bộ lọc tra cứu phòng/giường:', error)
     next(error)
   }
 }
@@ -202,6 +211,7 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
     const maCn = currentEmployee.ma_cn
 
     const {
+      search,
       loai_phong,
       trang_thai,
       tieu_chi,
@@ -212,6 +222,110 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
     ]
 
     const selectedCriteria = parseCriteriaQuery(tieu_chi)
+    const searchRaw = String(search || '').trim()
+    const searchText = searchRaw.toUpperCase()
+    const searchRoomCode = searchText.replace(/[.\s-]/g, '')
+
+    if (searchText) {
+      if (searchText.startsWith('HSDK')) {
+        const registrationRows = await prisma.$queryRaw`
+          SELECT
+            ma_dk,
+            hinh_thuc_thue,
+            so_nguoi,
+            thoi_han_thue,
+            tieu_chi,
+            chi_nhanh
+          FROM ho_so_dang_ky
+          WHERE UPPER(ma_dk) = ${searchText}
+            AND chi_nhanh = ${maCn}
+          LIMIT 1
+        `
+
+        if (registrationRows.length === 0) {
+          return res.json([])
+        }
+
+        const registration = registrationRows[0]
+        const soNguoi = Number(registration.so_nguoi || 0)
+        const thoiHanThue = Number(registration.thoi_han_thue || 0)
+
+        const hinhThucThue = String(registration.hinh_thuc_thue || '')
+          .trim()
+          .toLowerCase()
+
+        const registrationCriteria = String(registration.tieu_chi || '')
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean)
+
+        if (soNguoi > 0) {
+          if (hinhThucThue === 'nguyên phòng') {
+            where.push(Prisma.sql`
+              p.suc_chua_toi_da = ${soNguoi}
+              AND (
+                SELECT COUNT(*)::int
+                FROM giuong gx
+                WHERE gx.ma_phong = p.ma_phong
+              ) = ${soNguoi}
+              AND (
+                SELECT COUNT(*)::int
+                FROM giuong gx
+                WHERE gx.ma_phong = p.ma_phong
+                  AND gx.trang_thai = 'Trống'
+              ) = ${soNguoi}
+            `)
+          } else {
+            where.push(Prisma.sql`
+              (
+                SELECT COUNT(*)::int
+                FROM giuong gx
+                WHERE gx.ma_phong = p.ma_phong
+                  AND gx.trang_thai = 'Trống'
+              ) >= ${soNguoi}
+            `)
+          }
+        }
+
+        if (thoiHanThue > 0) {
+          where.push(Prisma.sql`
+            ${thoiHanThue} >= lp.thoi_han_toi_thieu
+            AND ${thoiHanThue} <= lp.thoi_han_toi_da
+          `)
+        }
+
+        if (registrationCriteria.length > 0) {
+          const criteriaConditions = registrationCriteria.map(item => {
+            const keyword = `%${item}%`
+
+            return Prisma.sql`
+              (
+                tc_hsdk.ten_tc ILIKE ${keyword}
+                OR lp.ten_loai ILIKE ${keyword}
+              )
+            `
+          })
+
+          where.push(Prisma.sql`
+            EXISTS (
+              SELECT 1
+              FROM tieu_chi tc_hsdk
+              WHERE tc_hsdk.ma_phong = p.ma_phong
+                AND (
+                  ${Prisma.join(criteriaConditions, ' OR ')}
+                )
+            )
+          `)
+        }
+      } else {
+        where.push(Prisma.sql`
+          (
+            UPPER(p.ma_phong) LIKE ${`%${searchText}%`}
+            OR REPLACE(REPLACE(REPLACE(UPPER(p.ma_phong), '.', ''), '-', ''), ' ', '') LIKE ${`%${searchRoomCode}%`}
+          )
+        `)
+      }
+    }
 
     if (loai_phong) {
       where.push(Prisma.sql`p.ma_loai = ${loai_phong}`)
@@ -230,17 +344,16 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
 
     if (selectedCriteria.length > 0) {
       where.push(Prisma.sql`
-        p.ma_phong IN (
-          SELECT tc_filter.ma_phong
+        EXISTS (
+          SELECT 1
           FROM tieu_chi tc_filter
           JOIN phong p_filter ON p_filter.ma_phong = tc_filter.ma_phong
-          WHERE BTRIM(tc_filter.ten_tc) IN (${Prisma.join(selectedCriteria)})
+          WHERE tc_filter.ma_phong = p.ma_phong
+            AND BTRIM(tc_filter.ten_tc) IN (${Prisma.join(selectedCriteria)})
             AND p_filter.chi_nhanh = ${maCn}
-          GROUP BY tc_filter.ma_phong
-          HAVING COUNT(DISTINCT BTRIM(tc_filter.ten_tc)) = ${selectedCriteria.length}
         )
       `)
-    }
+}
 
     const whereSql = Prisma.sql`WHERE ${Prisma.join(where, ' AND ')}`
 
@@ -252,6 +365,8 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
         p.ma_loai,
         lp.ten_loai,
         lp.gia_giuong,
+        lp.thoi_han_toi_thieu,
+        lp.thoi_han_toi_da,
 
         ${buildHangPhongSql()} AS hang_phong,
         ${buildGioiTinhSql()} AS gioi_tinh,
@@ -282,6 +397,8 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
         lp.ma_loai,
         lp.ten_loai,
         lp.gia_giuong,
+        lp.thoi_han_toi_thieu,
+        lp.thoi_han_toi_da,
         p.chi_nhanh,
         cn.ten_cn
 
@@ -290,7 +407,13 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
 
     res.json(rows.map(mapRoomRow))
   } catch (error) {
-    next(error)
+    console.error('Lỗi load danh sách phòng/giường:', error)
+
+    res.status(500).json({
+      success: false,
+      message: 'Không thể tải danh sách phòng/giường.',
+      error: error.message,
+    })
   }
 }
 
@@ -321,6 +444,8 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
         p.ma_loai,
         lp.ten_loai,
         lp.gia_giuong,
+        lp.thoi_han_toi_thieu,
+        lp.thoi_han_toi_da,
 
         ${buildHangPhongSql()} AS hang_phong,
         ${buildGioiTinhSql()} AS gioi_tinh,
@@ -352,6 +477,8 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
         lp.ma_loai,
         lp.ten_loai,
         lp.gia_giuong,
+        lp.thoi_han_toi_thieu,
+        lp.thoi_han_toi_da,
         p.chi_nhanh,
         cn.ten_cn
 
