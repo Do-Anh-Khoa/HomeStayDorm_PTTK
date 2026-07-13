@@ -31,13 +31,10 @@ class PhieuDatCocDB {
     return rows
   }
 
-  // TimKiemPDC(tuKhoa, maCN): PhieuDatCoc[] —
   static async TimKiemPDC(tuKhoa, maCN) {
     return this.LoadDSPDCChuaLap(maCN, tuKhoa)
   }
 
-  // LoadPDC(maPDC): PhieuDatCoc — kèm tên KH, CCCD, SĐT, tên NV Sale để đổ
-  // sẵn lên biểu mẫu lập phiếu thu .
   static async LoadPDC(maPDC) {
     const rows = await prisma.$queryRaw`
       SELECT pdc.ma_pdc AS "maPDC", pdc.ngay_dc AS "ngayDC", pdc.trang_thai AS "trangThai",
@@ -52,7 +49,6 @@ class PhieuDatCocDB {
     return rows[0] || null
   }
 
-  // LoadPDCTheoKhach(maKH): PhieuDatCoc — PDC gần nhất của 1 khách hàng.
   static async LoadPDCTheoKhach(maKH) {
     const rows = await prisma.$queryRaw`
       SELECT pdc.ma_pdc AS "maPDC", pdc.ngay_dc AS "ngayDC", pdc.trang_thai AS "trangThai",
@@ -65,8 +61,6 @@ class PhieuDatCocDB {
     return rows[0] || null
   }
 
-  // KiemTraDuDieuKienLapPTDC(maPDC): boolean — điều kiện tiên quyết:
-  // PDC phải đang ở trạng thái "Chờ thanh toán" mới được lập phiếu thu.
   static async KiemTraDuDieuKienLapPTDC(maPDC) {
     const rows = await prisma.$queryRaw`
       SELECT 1 FROM phieu_dat_coc
@@ -75,9 +69,51 @@ class PhieuDatCocDB {
     `
     return rows.length > 0
   }
+
   static async CapNhatQuaHan() {
     await prisma.$queryRaw`SELECT sp_cap_nhat_phieu_dat_coc_qua_han()`
-    }
+  }
+
+  // Cập nhật trạng thái phiếu thu - Sale
+  static async CapNhatCacPhieuQuaHan() {
+    const rows = await prisma.$queryRaw`
+      SELECT sp_cap_nhat_phieu_dat_coc_qua_han() AS "soDong"
+    `
+
+    return Number(rows[0]?.soDong || 0)
+  }
+
+  static async LayTheoMaDatCoc(maPDC) {
+    const rows = await prisma.$queryRaw`
+      SELECT pdc.ma_pdc     AS "maPDC",
+             pdc.ngay_dc    AS "ngayDC",
+             pdc.trang_thai AS "trangThai",
+             pdc.khach_dat  AS "maKH",
+             kh.ten_kh      AS "tenKH",
+             kh.cccd        AS "cccd",
+             kh.sdt         AS "sdt",
+             kh.email       AS "emailKH",
+             pdc.nv_sale    AS "maNVSale"
+      FROM phieu_dat_coc pdc
+      JOIN khach_hang kh ON kh.ma_kh = pdc.khach_dat
+      WHERE pdc.ma_pdc = ${maPDC}
+      LIMIT 1
+    `
+
+    return rows[0] || null
+  }
+
+  static async CapNhatTrangThaiChoDoiDuyet(maPDC) {
+    const rows = await prisma.$queryRaw`
+      UPDATE phieu_dat_coc
+      SET trang_thai = 'Chờ Duyệt'
+      WHERE ma_pdc = ${maPDC}
+        AND trang_thai = 'Chờ thanh toán'
+      RETURNING ma_pdc AS "maPDC"
+    `
+
+    return rows.length > 0
+  }
 }
 
 export default PhieuDatCocDB
