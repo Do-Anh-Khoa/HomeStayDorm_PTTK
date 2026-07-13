@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BriefcaseBusiness, CircleCheck, Home, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { createHoSoDangKy, fetchHoSoDangKyFormOptions } from '../../services/hoSoDangKy.js'
@@ -19,15 +19,14 @@ const INITIAL_FORM = {
   tieuChi: '',
 }
 
-const SPECIAL_REQUESTS = [
-  'Có máy lạnh',
-  'Giờ giấc tự do',
-  'Có bãi đỗ xe',
-  'Gần khu vệ sinh',
-  'Không gian yên tĩnh',
-  'Có ban công',
-  'Yêu cầu giường tầng dưới',
-]
+function getTomorrowDateInput() {
+  const now = new Date()
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  const year = tomorrow.getFullYear()
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
+  const day = String(tomorrow.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 function SectionHeading({ icon: Icon, title }) {
   return (
@@ -63,6 +62,7 @@ function getFieldClass(hasError = false) {
 
 function validateForm(formData) {
   const nextErrors = {}
+  const tomorrow = getTomorrowDateInput()
 
   if (!formData.hoTen.trim()) nextErrors.hoTen = 'Vui lòng nhập họ và tên.'
   if (!/^\d{9,15}$/.test(formData.soDienThoai.replace(/\s+/g, ''))) {
@@ -79,7 +79,18 @@ function validateForm(formData) {
   if (!Number.isInteger(Number(formData.soLuongNguoi)) || Number(formData.soLuongNguoi) <= 0) {
     nextErrors.soLuongNguoi = 'Số lượng người phải lớn hơn 0.'
   }
+  if (
+    formData.hinhThucThue === 'Nguyên phòng' &&
+    formData.capacityOptions &&
+    formData.capacityOptions.length > 0 &&
+    !formData.capacityOptions.includes(Number(formData.soLuongNguoi))
+  ) {
+    nextErrors.soLuongNguoi = `Thuê nguyên phòng chỉ được chọn đúng sức chứa phòng hiện có (${formData.capacityOptions.join(', ')} người).`
+  }
   if (!formData.thoiGianVao) nextErrors.thoiGianVao = 'Vui lòng chọn thời gian dự kiến vào ở.'
+  if (formData.thoiGianVao && formData.thoiGianVao < tomorrow) {
+    nextErrors.thoiGianVao = 'Thời gian dự kiến vào ở phải là ngày trong tương lai.'
+  }
   if (!formData.thoiHanThue) nextErrors.thoiHanThue = 'Vui lòng chọn thời hạn thuê.'
   if (!formData.chiNhanh) nextErrors.chiNhanh = 'Vui lòng chọn chi nhánh.'
 
@@ -105,8 +116,25 @@ export default function TaoHoSoDangKyPage() {
       { value: 6, label: '6 tháng' },
       { value: 12, label: '12 tháng' },
     ],
+    criteriaByBranch: {},
+    capacityByBranch: {},
   })
   const [successState, setSuccessState] = useState(null)
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
+
+  const availableCriteria = useMemo(() => {
+    const branchCriteria = formOptions.criteriaByBranch?.[formData.chiNhanh] || []
+    const selectedMissingCriteria = selectedFeatures
+      .filter((item) => !branchCriteria.some((option) => option.value === item))
+      .map((item) => ({ value: item, label: item }))
+
+    return [...branchCriteria, ...selectedMissingCriteria]
+  }, [formData.chiNhanh, formOptions.criteriaByBranch, selectedFeatures])
+
+  const availableCapacities = useMemo(
+    () => (formOptions.capacityByBranch?.[formData.chiNhanh] || []).map((value) => Number(value)).filter(Boolean),
+    [formData.chiNhanh, formOptions.capacityByBranch],
+  )
 
   useEffect(() => {
     if (!successState) {
@@ -140,6 +168,8 @@ export default function TaoHoSoDangKyPage() {
           branches: data.branches || [],
           rentTypes: data.rentTypes || [],
           termOptions: data.termOptions || [],
+          criteriaByBranch: data.criteriaByBranch || {},
+          capacityByBranch: data.capacityByBranch || {},
         })
 
         setFormData((current) => ({
@@ -165,6 +195,67 @@ export default function TaoHoSoDangKyPage() {
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    setFormData((current) => {
+      if (current.hinhThucThue !== 'Nguyên phòng') {
+        return current
+      }
+
+      const capacities = (formOptions.capacityByBranch?.[current.chiNhanh] || [])
+        .map((value) => Number(value))
+        .filter(Boolean)
+
+      if (capacities.length === 0) {
+        if (current.soLuongNguoi === '') {
+          return current
+        }
+
+        return {
+          ...current,
+          soLuongNguoi: '',
+        }
+      }
+
+      if (capacities.includes(Number(current.soLuongNguoi))) {
+        return current
+      }
+
+      return {
+        ...current,
+        soLuongNguoi: String(capacities[0]),
+      }
+    })
+  }, [formData.chiNhanh, formData.hinhThucThue, formOptions.capacityByBranch])
+
+  useEffect(() => {
+    const availableValues = new Set(
+      (formOptions.criteriaByBranch?.[formData.chiNhanh] || []).map((item) => item.value),
+    )
+
+    if (availableValues.size === 0) {
+      setSelectedFeatures([])
+      setFormData((current) => ({
+        ...current,
+        tieuChi: '',
+      }))
+      return
+    }
+
+    setSelectedFeatures((current) => {
+      const filtered = current.filter((item) => availableValues.has(item))
+      if (filtered.length === current.length) {
+        return current
+      }
+
+      setFormData((currentForm) => ({
+        ...currentForm,
+        tieuChi: filtered.join(', '),
+      }))
+
+      return filtered
+    })
+  }, [formData.chiNhanh, formOptions.criteriaByBranch])
 
   const handleChange = (field) => (event) => {
     const value = event.target.value
@@ -198,7 +289,10 @@ export default function TaoHoSoDangKyPage() {
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    const nextErrors = validateForm(formData)
+    const nextErrors = validateForm({
+      ...formData,
+      capacityOptions: availableCapacities,
+    })
     setFieldErrors(nextErrors)
     setSubmitError('')
 
@@ -218,8 +312,51 @@ export default function TaoHoSoDangKyPage() {
     }
   }
 
+  const handleCancelRequest = () => {
+    if (submitting) {
+      return
+    }
+
+    setCancelConfirmOpen(true)
+  }
+
+  const handleConfirmCancel = () => {
+    setCancelConfirmOpen(false)
+    navigate('/sale/ho-so-dang-ky')
+  }
+
   return (
     <section className="relative space-y-8 pb-8">
+      {cancelConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e2418]/35 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[460px] rounded-[20px] border border-[#d8ddcf] bg-white p-6 shadow-[0_20px_60px_rgba(33,41,21,0.18)] sm:p-7">
+            <h2 className="text-[26px] font-extrabold tracking-[-0.02em] text-[#26351d]">
+              Xác nhận hủy
+            </h2>
+            <p className="mt-3 text-[16px] leading-[1.7] text-[#5c6258]">
+              Bạn có chắc muốn hủy thao tác tạo hồ sơ không? Các thông tin đang nhập sẽ không được lưu.
+            </p>
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setCancelConfirmOpen(false)}
+                className="inline-flex h-[48px] items-center justify-center rounded-[10px] border border-[#d9ddd2] px-6 text-[16px] font-semibold text-[#676d63] transition hover:bg-[#f5f7f1]"
+              >
+                Tiếp tục nhập
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                className="inline-flex h-[48px] items-center justify-center rounded-[10px] bg-[#b94b45] px-6 text-[16px] font-semibold text-white transition hover:bg-[#a6403a]"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {successState && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e2418]/35 px-4 backdrop-blur-[2px]">
           <div className="w-full max-w-[520px] rounded-[20px] border border-[#d8ddcf] bg-white p-6 text-center shadow-[0_20px_60px_rgba(33,41,21,0.18)] sm:p-8">
@@ -295,7 +432,7 @@ export default function TaoHoSoDangKyPage() {
               <fieldset className="space-y-3">
                 <legend className="text-[14px] font-semibold text-[#6a7065]">Giới tính *</legend>
                 <div className="flex flex-wrap gap-6 text-[17px] text-[#4d534a]">
-                  {['Nam', 'Nữ', 'Khác'].map((option) => (
+                  {['Nam', 'Nữ'].map((option) => (
                     <label key={option} className="inline-flex items-center gap-2">
                       <input
                         type="radio"
@@ -353,7 +490,29 @@ export default function TaoHoSoDangKyPage() {
               <InputField label="Hình thức thuê" required error={fieldErrors.hinhThucThue}>
                 <select
                   value={formData.hinhThucThue}
-                  onChange={handleChange('hinhThucThue')}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setFormData((current) => {
+                      if (value !== 'Nguyên phòng') {
+                        return {
+                          ...current,
+                          hinhThucThue: value,
+                          soLuongNguoi: current.soLuongNguoi || '1',
+                        }
+                      }
+
+                      return {
+                        ...current,
+                        hinhThucThue: value,
+                        soLuongNguoi: availableCapacities.length > 0 ? String(availableCapacities[0]) : '',
+                      }
+                    })
+                    setFieldErrors((current) => ({
+                      ...current,
+                      hinhThucThue: '',
+                      soLuongNguoi: '',
+                    }))
+                  }}
                   className={getFieldClass(Boolean(fieldErrors.hinhThucThue))}
                   disabled={loadingOptions}
                 >
@@ -366,13 +525,32 @@ export default function TaoHoSoDangKyPage() {
               </InputField>
 
               <InputField label="Số lượng người" required error={fieldErrors.soLuongNguoi}>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.soLuongNguoi}
-                  onChange={handleChange('soLuongNguoi')}
-                  className={getFieldClass(Boolean(fieldErrors.soLuongNguoi))}
-                />
+                {formData.hinhThucThue === 'Nguyên phòng' ? (
+                  <select
+                    value={formData.soLuongNguoi}
+                    onChange={handleChange('soLuongNguoi')}
+                    className={getFieldClass(Boolean(fieldErrors.soLuongNguoi))}
+                    disabled={loadingOptions || availableCapacities.length === 0}
+                  >
+                    {availableCapacities.length === 0 ? (
+                      <option value="">Không có mức sức chứa phù hợp</option>
+                    ) : (
+                      availableCapacities.map((capacity) => (
+                        <option key={capacity} value={capacity}>
+                          {capacity} người
+                        </option>
+                      ))
+                    )}
+                  </select>
+                ) : (
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.soLuongNguoi}
+                    onChange={handleChange('soLuongNguoi')}
+                    className={getFieldClass(Boolean(fieldErrors.soLuongNguoi))}
+                  />
+                )}
               </InputField>
 
               <InputField label="Thời gian dự kiến vào ở" required error={fieldErrors.thoiGianVao}>
@@ -380,6 +558,7 @@ export default function TaoHoSoDangKyPage() {
                   type="date"
                   value={formData.thoiGianVao}
                   onChange={handleChange('thoiGianVao')}
+                  min={getTomorrowDateInput()}
                   className={getFieldClass(Boolean(fieldErrors.thoiGianVao))}
                 />
               </InputField>
@@ -422,15 +601,15 @@ export default function TaoHoSoDangKyPage() {
           <SectionHeading icon={CircleCheck} title="Tiện ích & yêu cầu đặc biệt" />
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {SPECIAL_REQUESTS.map((feature) => (
+            {availableCriteria.map((feature) => (
               <label key={feature} className="inline-flex items-start gap-3 text-[18px] text-[#4d534a]">
                 <input
                   type="checkbox"
-                  checked={selectedFeatures.includes(feature)}
-                  onChange={handleFeatureChange(feature)}
+                  checked={selectedFeatures.includes(feature.value)}
+                  onChange={handleFeatureChange(feature.value)}
                   className="mt-1 h-4 w-4 rounded border-[#cbd2c3] text-[#4b6132] focus:ring-[#4b6132]"
                 />
-                <span>{feature}</span>
+                <span>{feature.label}</span>
               </label>
             ))}
           </div>
@@ -439,7 +618,8 @@ export default function TaoHoSoDangKyPage() {
         <div className="mt-12 flex flex-col-reverse gap-3 border-t border-[#edf0ea] pt-8 sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={() => navigate('/sale/ho-so-dang-ky')}
+            onClick={handleCancelRequest}
+            disabled={submitting}
             className="inline-flex h-[52px] items-center justify-center rounded-[8px] px-8 text-[18px] font-semibold text-[#676d63] transition hover:bg-[#f5f7f1]"
           >
             Hủy

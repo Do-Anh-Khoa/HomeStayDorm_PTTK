@@ -37,6 +37,18 @@ function toDateStartOfDay(value) {
   return new Date(`${value}T00:00:00`)
 }
 
+function isFutureDate(value) {
+  if (!validateDate(value)) {
+    return false
+  }
+
+  const inputDate = toDateStartOfDay(value)
+  const today = new Date()
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+
+  return inputDate > todayStart
+}
+
 function splitCriteria(criteriaText) {
   return String(criteriaText || '')
     .split(',')
@@ -120,6 +132,10 @@ export function buildCreateHoSoDangKyInput(payload = {}, context = {}) {
     throw createHttpError('Thời gian dự kiến vào ở không hợp lệ.')
   }
 
+  if (!isFutureDate(thoiGianVao)) {
+    throw createHttpError('Thời gian dự kiến vào ở phải là ngày trong tương lai.')
+  }
+
   if (!hinhThucThue) {
     throw createHttpError('Hình thức thuê không hợp lệ.')
   }
@@ -170,6 +186,8 @@ export function buildHoSoDangKyFormEntity(snapshot = {}) {
       { value: 6, label: '6 tháng' },
       { value: 12, label: '12 tháng' },
     ],
+    criteriaByBranch: snapshot.criteriaByBranch || {},
+    capacityByBranch: snapshot.capacityByBranch || {},
   }
 }
 
