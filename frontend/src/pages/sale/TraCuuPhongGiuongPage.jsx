@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../../services/api.js'
 
 const ROOM_IMAGE =
@@ -262,6 +263,9 @@ function RoomCard({ room, onViewDetail }) {
 }
 
 export default function TraCuuPhongGiuongPage() {
+  const location = useLocation() 
+  const navigate = useNavigate() 
+  
   const [search, setSearch] = useState('')
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
@@ -274,7 +278,8 @@ export default function TraCuuPhongGiuongPage() {
   const [loadingRooms, setLoadingRooms] = useState(false)
 
   const [selectedRoom, setSelectedRoom] = useState(null)
-  const [shouldShowEditButton] = useState(false)
+  const createdProfile = location.state?.createdProfile
+  const shouldShowEditButton = Boolean(createdProfile)
 
   const setFilter = (key, value) => {
     setFilters(current => ({
@@ -393,7 +398,18 @@ export default function TraCuuPhongGiuongPage() {
   }
 
   const handleEditRegistration = () => {
-    window.alert('Chức năng chỉnh sửa hồ sơ đăng ký sẽ làm sau.')
+    if (createdProfile) {
+      console.log('Debug createdProfile:', createdProfile); // 
+      
+      
+      const maHoSo = createdProfile.ma_dk || createdProfile.id || createdProfile.maDk; 
+      
+      if (!maHoSo) {
+        window.alert('Không tìm thấy mã hồ sơ trong dữ liệu!');
+        return;
+      }
+      navigate(`/sale/ho-so-dang-ky/chinh-sua/${maHoSo}`)
+    }
   }
 
   return (

@@ -5,6 +5,7 @@ import roomRoutes from './room.routes.js'
 import chiNhanhRoutes from './chi-nhanh.routes.js'
 import { authMiddleware } from '../middlewares/authMiddleware.js'
 import dichVuRoutes from './dich-vu.routes.js'
+import chiTietDvRoutes from './chi-tiet-dv.routes.js'
 import quyDinhHoanCocRoutes from './quy-dinh-hoan-coc.routes.js'
 import loaiPhongRoutes from './loai-phong.routes.js'
 import phongGiuongRoutes from './phong-giuong.routes.js'
@@ -20,6 +21,9 @@ import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
 import boiThuongRoutes from './boi-thuong.routes.js'
 import banGiaoRoutes from './ban-giao.routes.js'
 import ptTraPhongRoutes from './pt-tra-phong.routes.js'
+import keToanDashboardRoutes from './ke-toan-dashboard.routes.js'
+import phieuThuBoiThuongRoutes from './phieuThuBoiThuong.routes.js'
+import phieuThuDatCocRoutes from './phieuThuDatCoc.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -28,6 +32,7 @@ router.use('/rooms', authMiddleware, roomRoutes)
 router.use('/phong', authMiddleware, roomRoutes)
 router.use('/chi-nhanh', authMiddleware, chiNhanhRoutes)
 router.use('/dich-vu', dichVuRoutes)
+router.use('/chi-tiet-dv', chiTietDvRoutes)
 router.use('/quy-dinh-hoan-coc', quyDinhHoanCocRoutes)
 router.use('/loai-phong', authMiddleware, loaiPhongRoutes)
 router.use('/phong-giuong', phongGiuongRoutes)
@@ -42,7 +47,9 @@ router.use('/tra-cuu-phong-giuong', authMiddleware, traCuuPhongGiuongRoutes)
 router.use('/vat-dung-hu-hai', authMiddleware, vatDungHuHaiRoutes)
 router.use('/boi-thuong', authMiddleware, boiThuongRoutes)
 router.use('/ban-giao', authMiddleware, banGiaoRoutes)
-//router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
-//router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
+router.use('/ban-giao', authMiddleware, banGiaoRoutes)
 router.use('/pt-tra-phong', authMiddleware, ptTraPhongRoutes)
+router.use('/ke-toan', authMiddleware, keToanDashboardRoutes)
+router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
+router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
 export default router
