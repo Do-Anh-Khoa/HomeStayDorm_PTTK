@@ -1,10 +1,4 @@
 // backend/src/controllers/phieuThuBoiThuongController.js
-//
-// QLPhieuThuBoiThuongController — tương ứng lớp QLPhieuThuBoiThuongController
-// trong class diagram. Ráp Entity (BoiThuong, PhieuThuBoiThuong, VatDung,
-// KhachHang, NhanVien) + Utils (GuiMailPhieuThuBT, InPTBoiThuong) theo đúng
-// luồng use-case 1.4.20 "Lập phiếu thu bồi thường".
-
 import BoiThuong from '../entities/BoiThuong.js'
 import PhieuThuBoiThuong from '../entities/PhieuThuBoiThuong.js'
 import VatDung from '../entities/VatDung.js'
@@ -17,11 +11,9 @@ import { inPTBT } from '../utils/inPTBoiThuong.js'
 // VatDung.LayVatDung(tenVD) mỗi khi cần lấy đơn giá bồi thường.
 const TEN_VD_VI_PHAM = 'Thẻ ra vào'
 
-// ------------------------------------------------------------------
-// Bước 1 (Hình 100): danh sách biên bản bồi thường chờ xử lý
+// Bước 1: danh sách biên bản bồi thường chờ xử lý
 // CHỈ lấy các BT do người quản lý CÙNG CHI NHÁNH với kế toán đang đăng nhập.
 // GET /api/phieu-thu-boi-thuong/cho-xu-ly
-// ------------------------------------------------------------------
 export const loadDSBTChoXuLy = async (req, res) => {
   try {
     const nv = req.auth // lấy từ middleware xác thực (đã đăng nhập)
@@ -38,10 +30,9 @@ export const loadDSBTChoXuLy = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Tìm kiếm theo mã biên bản / tên khách hàng (ô search ở Hình 100)
+
+// Tìm kiếm theo mã biên bản / tên khách hàng 
 // GET /api/phieu-thu-boi-thuong/cho-xu-ly?tuKhoa=...
-// ------------------------------------------------------------------
 export const timKiemBBBT = async (req, res) => {
   try {
     const nv = req.auth
@@ -59,17 +50,10 @@ export const timKiemBBBT = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 2 (Hình 101): chọn 1 biên bản -> load thông tin, tự tính số lần vi
+// Bước 2: chọn 1 biên bản -> load thông tin, tự tính số lần vi
 // phạm và số tiền cần thu, đổ sẵn lên biểu mẫu.
 // GET /api/phieu-thu-boi-thuong/lap/:maBT
-//
-// LƯU Ý: soLanViPham lấy trực tiếp từ bt.soLanViPham (đã tính sẵn trong
-// SQL của BoiThuong.LoadBT). KHÔNG tính lại qua JS Date như bản cũ, vì
-// cột ngay_bt lưu tới microsecond còn Date của JS chỉ giữ millisecond —
-// vòng qua JS rồi quay lại SQL sẽ làm lệch giá trị so sánh và ra sai
-// số lần vi phạm (bug đã gặp: "Lần 0" / "0đ").
-// ------------------------------------------------------------------
+
 export const loadThongTinLapPTBT = async (req, res) => {
   try {
     const { maBT } = req.params
@@ -85,7 +69,7 @@ export const loadThongTinLapPTBT = async (req, res) => {
     const bt = await BoiThuong.LoadBT(maBT)
     if (!bt) return res.status(404).json({ message: 'Không tìm thấy biên bản bồi thường.' })
 
-    // LayVatDung(tenVD): VatDung — tra riêng theo tên, đúng sequence diagram
+    // LayVatDung(tenVD): VatDung — tra riêng theo tên
     const vd = await VatDung.LayVatDung(TEN_VD_VI_PHAM)
     if (!vd) {
       return res.status(500).json({ message: `Không tìm thấy vật dụng "${TEN_VD_VI_PHAM}" trong hệ thống.` })
@@ -113,13 +97,11 @@ export const loadThongTinLapPTBT = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 2 (tiếp, nút "Tạo & In Phiếu Thu Bồi Thường" - Hình 101):
+// Bước 2 (nút "Tạo & In Phiếu Thu Bồi Thường" ):
 // tạo phiếu thu, kiểm tra lại tồn tại (chống race-condition khi 2 kế toán
 // cùng xử lý 1 BT), gửi email, xuất PDF.
 // POST /api/phieu-thu-boi-thuong/lap
 // body: { maBT }
-// ------------------------------------------------------------------
 export const lapVaLuuPTBT = async (req, res) => {
   try {
     const { maBT } = req.body
@@ -180,11 +162,9 @@ export const lapVaLuuPTBT = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 3 (Hình 102): danh sách phiếu thu bồi thường đã lập HÔM NAY,
+// Bước 3 : danh sách phiếu thu bồi thường đã lập HÔM NAY,
 // chỉ những phiếu do CHÍNH nhân viên đang đăng nhập lập.
 // GET /api/phieu-thu-boi-thuong/da-lap-hom-nay
-// ------------------------------------------------------------------
 export const loadDSPTBTDaLapHomNay = async (req, res) => {
   try {
     const nv = req.auth
@@ -198,14 +178,8 @@ export const loadDSPTBTDaLapHomNay = async (req, res) => {
   }
 }
 
-// ------------------------------------------------------------------
-// Bước 4 (Hình 103): xem chi tiết 1 phiếu thu đã lập
+// Bước 4: xem chi tiết 1 phiếu thu đã lập
 // GET /api/phieu-thu-boi-thuong/:maPTDB
-//
-// LƯU Ý: dùng TinhSoLanViPhamTheoBT(maBT) — tính trực tiếp trong SQL qua
-// mã biên bản, KHÔNG truyền ngayBT (Date đã qua JS) như bản cũ, để tránh
-// đúng bug mất precision đã sửa ở loadThongTinLapPTBT.
-// ------------------------------------------------------------------
 export const xemChiTietPTBT = async (req, res) => {
   try {
     const { maPTDB } = req.params
@@ -227,10 +201,8 @@ ptbt.soLanViPham = giaBoiThuong > 0 ? Math.round(tongTien / giaBoiThuong) : 0
   }
 }
 
-// ------------------------------------------------------------------
-// Nút "In phiếu thu" (Hình 103): xuất PDF và trả file cho client tải về
+// Nút "In phiếu thu": xuất PDF và trả file cho client tải về
 // GET /api/phieu-thu-boi-thuong/:maPTDB/pdf
-// ------------------------------------------------------------------
 export const inPhieuThuPDF = async (req, res) => {
   try {
     const { maPTDB } = req.params

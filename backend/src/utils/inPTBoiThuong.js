@@ -1,16 +1,9 @@
-// backend/src/utils/inPTBoiThuong.js
-// Cần cài: npm install pdfkit --save (trong thư mục backend)
 import PDFDocument from 'pdfkit'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-// QUAN TRỌNG: font mặc định của pdfkit KHÔNG hỗ trợ dấu tiếng Việt.
-// Bạn cần tải 1 font Unicode (khuyến nghị Roboto hoặc Be Vietnam Pro dạng .ttf)
-// và đặt vào: backend/src/assets/fonts/Roboto-Regular.ttf
-//                                       /Roboto-Bold.ttf
 const FONT_REGULAR = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf')
 const FONT_BOLD = path.join(__dirname, '../assets/fonts/Roboto-Bold.ttf')
 

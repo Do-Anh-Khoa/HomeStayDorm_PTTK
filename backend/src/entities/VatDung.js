@@ -1,4 +1,3 @@
-// backend/src/entities/VatDung.js
 import { VatDungDB } from '../database/HoTroBoiThuongDB.js'
 
 class VatDung {

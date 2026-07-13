@@ -1,11 +1,7 @@
-// backend/src/utils/guiMailPhieuThuBT.js
 import nodemailer from 'nodemailer'
 
 /**
  * GuiMailPhieuThuBT — tương ứng lớp GuiMailPhieuThuBT trong class diagram.
- * GuiEmailThongBaoDongPhat(ptbt): boolean
- *
- * Viết cùng style với sendResetPasswordEmail bạn đã có sẵn.
  */
 export const guiEmailThongBaoDongPhat = async (ptbt) => {
   const transporter = nodemailer.createTransport({

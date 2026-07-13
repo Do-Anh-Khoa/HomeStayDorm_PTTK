@@ -6,7 +6,7 @@ import { getStoredUser } from '../../services/authSession.js'
 const formatTien = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ'
 const formatNgay = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '')
 
-// ===== Header dùng chung cho màn Form / Chi tiết (thay cho PageTitle) =====
+// Header dùng chung cho màn Form / Chi tiết (thay cho PageTitle) 
 function SubHeader({ title }) {
   return (
     <div style={S.subHeader}>
@@ -14,7 +14,7 @@ function SubHeader({ title }) {
     </div>
   )
 }
-// ===== Màn hình 1 (Hình 100): Danh sách biên bản chờ xử lý + đã lập hôm nay =====
+// Màn hình 1 : Danh sách biên bản chờ xử lý + đã lập hôm nay
 function DanhSachBTChoXuLy({ dsChoXuLy, dsDaLap, tuKhoa, setTuKhoa, loading, onChonLap, onXemChiTiet }) {
   return (
     <>
@@ -109,7 +109,7 @@ function DanhSachBTChoXuLy({ dsChoXuLy, dsDaLap, tuKhoa, setTuKhoa, loading, onC
   )
 }
 
-// ===== Màn hình 2 (Hình 101): Biểu mẫu lập phiếu thu bồi thường =====
+//Màn hình 2 : Biểu mẫu lập phiếu thu bồi thường 
 function BieuMauLapPT({ thongTin, saving, errorMsg, onHuy, onTao }) {
   return (
     <>
@@ -204,7 +204,7 @@ function FormField({ label, value, highlight }) {
   )
 }
 
-// ===== Màn hình 3 (Hình 103): Xem chi tiết phiếu thu đã lập =====
+// Màn hình 3 : Xem chi tiết phiếu thu đã lập 
 function ChiTietPT({ pt, onQuayLai, onIn, printing }) {
   return (
     <>
