@@ -2,65 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Filter, Plus, Search } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import PageTitle from '../../components/common/PageTitle.jsx'
+import { fetchReturnProfileList } from '../../services/hoSoTraPhong.js'
 
 const PAGE_SIZE = 3
-
-const RETURN_PROFILE_ROWS = [
-  {
-    id: 'TP-2311-001',
-    tenantName: 'Trần Thị B',
-    idCardOrPhone: '0901234567',
-    roomBed: 'P.102 - G02',
-    profileType: 'Hết hạn hợp đồng',
-    returnDate: '2026-11-25',
-    status: 'Chờ quyết toán',
-  },
-  {
-    id: 'TP-2311-002',
-    tenantName: 'Lê Văn C',
-    idCardOrPhone: '0987654321',
-    roomBed: 'P.205 - G01',
-    profileType: 'Trả phòng trước hạn',
-    returnDate: '2026-11-28',
-    status: 'Đã hẹn',
-  },
-  {
-    id: 'TP-2310-045',
-    tenantName: 'Phạm Thị D',
-    idCardOrPhone: '0912345678',
-    roomBed: 'P.301 - G04',
-    profileType: 'Hết hạn hợp đồng',
-    returnDate: '2026-11-15',
-    status: 'Hoàn tất',
-  },
-  {
-    id: 'TP-2310-031',
-    tenantName: 'Nguyễn Văn A',
-    idCardOrPhone: '0973456123',
-    roomBed: 'P.103 - G03',
-    profileType: 'Chuyển phòng nội bộ',
-    returnDate: '2026-11-17',
-    status: 'Chờ quyết toán',
-  },
-  {
-    id: 'TP-2310-018',
-    tenantName: 'Đỗ Minh T',
-    idCardOrPhone: '0937788665',
-    roomBed: 'P.202 - G02',
-    profileType: 'Trả phòng trước hạn',
-    returnDate: '2026-11-19',
-    status: 'Đã hẹn',
-  },
-  {
-    id: 'TP-2309-097',
-    tenantName: 'Bùi Gia Hân',
-    idCardOrPhone: '0924567812',
-    roomBed: 'P.401 - G08',
-    profileType: 'Hết hạn hợp đồng',
-    returnDate: '2026-11-08',
-    status: 'Hoàn tất',
-  },
-]
 
 function formatDate(value) {
   if (!value) {
@@ -82,6 +26,8 @@ function normalizeText(value) {
 export default function TraPhongPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [rows, setRows] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -90,12 +36,40 @@ export default function TraPhongPage() {
     date: '',
   })
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setIsLoading(true)
+      try {
+        const data = await fetchReturnProfileList()
+        if (!cancelled) {
+          setRows(Array.isArray(data) ? data : [])
+        }
+      } catch {
+        if (!cancelled) {
+          setRows([])
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const filteredRows = useMemo(() => {
-    return RETURN_PROFILE_ROWS.filter((row) => {
+    return rows.filter((row) => {
       const query = normalizeText(appliedFilters.search)
       const matchesSearch =
         !query ||
-        [row.id, row.tenantName, row.idCardOrPhone, row.roomBed, row.profileType].some((value) =>
+        [row.id, row.tenantName, row.idCardOrPhone, row.roomBed].some((value) =>
           normalizeText(value).includes(query),
         )
 
@@ -103,7 +77,7 @@ export default function TraPhongPage() {
 
       return matchesSearch && matchesDate
     })
-  }, [appliedFilters])
+  }, [appliedFilters, rows])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
 
@@ -207,7 +181,7 @@ export default function TraPhongPage() {
               {paginatedRows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-14 text-center text-[16px] text-[#74796f]">
-                    Không có hồ sơ trả phòng phù hợp với bộ lọc hiện tại.
+                    {isLoading ? 'Đang tải danh sách hồ sơ trả phòng...' : 'Không có hồ sơ trả phòng phù hợp với bộ lọc hiện tại.'}
                   </td>
                 </tr>
               ) : (

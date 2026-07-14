@@ -9,87 +9,9 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-
-const DETAIL_BY_ID = {
-  'TP-2311-002': {
-    maHoSo: 'HSTP-001',
-    status: 'Đã hẹn',
-    customerName: 'Nguyễn Văn A',
-    cccd: '012345678901',
-    phone: '0901234567',
-    email: 'nguyenvana@example.com',
-    profileType: 'Hợp đồng thuê',
-    contractId: 'HD-2023-001',
-    roomBed: 'P.101 - G01',
-    currentStatus: 'Đang sử dụng',
-    expectedReturnDate: '2023-12-15',
-    appointmentTime: '14:30 - 15/12/2023',
-    emailStatus: 'Đã gửi',
-  },
-  'TP-2311-001': {
-    maHoSo: 'HSTP-002',
-    status: 'Chờ quyết toán',
-    customerName: 'Trần Thị B',
-    cccd: '023456789012',
-    phone: '0912345678',
-    email: 'tranthib@example.com',
-    profileType: 'Hợp đồng thuê',
-    contractId: 'HD-2023-015',
-    roomBed: 'P.102 - G02',
-    currentStatus: 'Đang sử dụng',
-    expectedReturnDate: '2023-11-25',
-    appointmentTime: '09:30 - 25/11/2023',
-    emailStatus: 'Chưa gửi',
-  },
-  'TP-2310-045': {
-    maHoSo: 'HSTP-003',
-    status: 'Hoàn tất',
-    customerName: 'Phạm Thị D',
-    cccd: '034567890123',
-    phone: '0934567890',
-    email: 'phamthid@example.com',
-    profileType: 'Hợp đồng thuê',
-    contractId: 'HD-2023-055',
-    roomBed: 'P.301 - G04',
-    currentStatus: 'Đã trả phòng',
-    expectedReturnDate: '2023-10-15',
-    appointmentTime: '10:00 - 15/10/2023',
-    emailStatus: 'Đã gửi',
-  },
-  'TP-2310-031': {
-    maHoSo: 'HSTP-004',
-    status: 'Chờ quyết toán',
-    customerName: 'Nguyễn Văn A',
-    cccd: '045678901234',
-    phone: '0973456123',
-    email: 'nguyenvana.pdc@example.com',
-    profileType: 'Phiếu đặt cọc',
-    contractId: '',
-    depositId: 'PDC-2023-031',
-    roomBed: 'P.103 - G03',
-    currentStatus: 'Chưa lập hợp đồng',
-    expectedReturnDate: '',
-    appointmentTime: '',
-    emailStatus: 'Giải quyết trong ngày',
-  },
-  'TP-2310-018': {
-    maHoSo: 'HSTP-005',
-    status: 'Đã hẹn',
-    customerName: 'Đỗ Minh T',
-    cccd: '056789012345',
-    phone: '0937788665',
-    email: 'dominht.pdc@example.com',
-    profileType: 'Phiếu đặt cọc',
-    contractId: '',
-    depositId: 'PDC-2023-018',
-    roomBed: 'P.202 - G02',
-    currentStatus: 'Chưa lập hợp đồng',
-    expectedReturnDate: '',
-    appointmentTime: '',
-    emailStatus: 'Giải quyết trong ngày',
-  },
-}
+import { cancelReturnProfile, fetchReturnProfileDetail } from '../../services/hoSoTraPhong.js'
 
 const RENT_STATUS_STYLES = {
   'Đang sử dụng': 'bg-[#f7d8d6] text-[#9f5d58]',
@@ -140,28 +62,85 @@ export default function ChiTietHoSoTraPhongPage() {
   const { profileId = '' } = useParams()
   const listPath = location.pathname.startsWith('/sale') ? '/sale/tra-phong' : '/quan-ly/tra-phong'
 
-  const detail = DETAIL_BY_ID[profileId] || {
-    maHoSo: profileId || 'HSTP-001',
-    status: 'Đã hẹn',
-    customerName: 'Nguyễn Văn A',
-    cccd: '012345678901',
-    phone: '0901234567',
-    email: 'nguyenvana@example.com',
-    profileType: 'Hợp đồng thuê',
-    contractId: 'HD-2023-001',
-    roomBed: 'P.101 - G01',
-    currentStatus: 'Đang sử dụng',
-    expectedReturnDate: '2023-12-15',
-    appointmentTime: '14:30 - 15/12/2023',
-    emailStatus: 'Đã gửi',
-  }
-  const isDepositCase = !detail.contractId
+  const [rawDetail, setRawDetail] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setIsLoading(true)
+      try {
+        const data = await fetchReturnProfileDetail(profileId)
+        if (!cancelled) {
+          setRawDetail(data)
+        }
+      } catch {
+        if (!cancelled) {
+          setRawDetail(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [profileId])
+
+  const detail = useMemo(() => {
+    if (!rawDetail) return null
+    const contractId = rawDetail.maHopDong || ''
+    const expectedReturnDate = rawDetail.ngayTraPhongDuKien || ''
+    const isDepositCase = !contractId
+    const emailStatus = isDepositCase
+      ? 'Không gửi email'
+      : expectedReturnDate
+        ? 'Đã gửi'
+        : '--'
+
+    return {
+      maHoSo: rawDetail.maHoSo || profileId,
+      customerName: rawDetail.hoVaTen || '',
+      cccd: rawDetail.cccd || '',
+      phone: rawDetail.soDienThoai || '',
+      email: rawDetail.email || '',
+      profileType: contractId ? 'Hợp đồng thuê' : 'Phiếu đặt cọc',
+      contractId,
+      depositId: rawDetail.maPdc || '',
+      roomBed: rawDetail.phongGiuong || '',
+      currentStatus: rawDetail.trangThaiHienTai || 'Đang sử dụng',
+      expectedReturnDate,
+      appointmentTime: rawDetail.lichHenTraPhong || '',
+      emailStatus,
+    }
+  }, [profileId, rawDetail])
+
+  const isDepositCase = !detail?.contractId
   const returnDateDisplay = isDepositCase
     ? 'Giải quyết trong ngày'
-    : formatDate(detail.expectedReturnDate)
+    : formatDate(detail?.expectedReturnDate)
   const appointmentDisplay = isDepositCase
     ? 'Giải quyết trong ngày'
-    : detail.appointmentTime
+    : detail?.appointmentTime
+
+  const handleCancel = async () => {
+    const confirmed = window.confirm('Bạn có chắc chắn muốn hủy hồ sơ trả phòng này không?')
+    if (!confirmed) return
+
+    try {
+      await cancelReturnProfile(profileId)
+      window.alert('Hủy hồ sơ trả phòng thành công.')
+      navigate(listPath)
+    } catch (error) {
+      window.alert(error?.response?.data?.message || 'Không thể hủy hồ sơ trả phòng.')
+    }
+  }
 
   return (
     <section className="pb-8">
@@ -180,7 +159,7 @@ export default function ChiTietHoSoTraPhongPage() {
 
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-[24px] font-extrabold tracking-[-0.02em] text-[#26351d] sm:text-[30px]">
-                  Chi tiết hồ sơ trả phòng {detail.maHoSo}
+                  Chi tiết hồ sơ trả phòng {detail?.maHoSo || profileId}
                 </h1>
               </div>
             </div>
@@ -188,6 +167,8 @@ export default function ChiTietHoSoTraPhongPage() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
+                onClick={handleCancel}
+                disabled={isLoading || !detail}
                 className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[10px] border border-[#b96f6a] bg-[#f4cac8] px-4 text-[14px] font-semibold text-[#5f2623] transition hover:bg-[#efbfbc]"
               >
                 <Trash2 size={15} />
@@ -214,10 +195,10 @@ export default function ChiTietHoSoTraPhongPage() {
               </div>
 
               <div className="grid gap-x-10 gap-y-6 md:grid-cols-2">
-                <InfoField label="Họ tên" value={detail.customerName} />
-                <InfoField label="CCCD" value={detail.cccd} />
-                <InfoField label="Số điện thoại" value={detail.phone} />
-                <InfoField label="Email" value={detail.email} />
+                <InfoField label="Họ tên" value={detail?.customerName || ''} />
+                <InfoField label="CCCD" value={detail?.cccd || ''} />
+                <InfoField label="Số điện thoại" value={detail?.phone || ''} />
+                <InfoField label="Email" value={detail?.email || ''} />
               </div>
             </section>
 
@@ -230,20 +211,20 @@ export default function ChiTietHoSoTraPhongPage() {
               </div>
 
               <div className="grid gap-5 rounded-[12px] border border-[#d9ddd2] bg-[#fcfcfa] px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
-                <InfoField label="Loại hồ sơ" value={detail.profileType} />
+                <InfoField label="Loại hồ sơ" value={detail?.profileType || ''} />
                 <div className="space-y-2">
                   <div className="text-[13px] font-semibold text-[#7b8176]">
                     {isDepositCase ? 'Mã PDC' : 'Mã hợp đồng'}
                   </div>
                   <div className="flex items-center gap-2 text-[16px] font-semibold text-[#32382d]">
-                    <span>{detail.contractId || detail.depositId || '--'}</span>
+                    <span>{detail?.contractId || detail?.depositId || '--'}</span>
                     {!isDepositCase ? (
                       <SquareArrowOutUpRight size={14} className="text-[#6d7268]" />
                     ) : null}
                   </div>
                 </div>
-                <InfoField label="Phòng/Giường" value={detail.roomBed} />
-                <InfoField label="Trạng thái hiện tại" value={detail.currentStatus} badge />
+                <InfoField label="Phòng/Giường" value={detail?.roomBed || ''} />
+                <InfoField label="Trạng thái hiện tại" value={detail?.currentStatus || ''} badge />
               </div>
             </section>
 
@@ -266,7 +247,7 @@ export default function ChiTietHoSoTraPhongPage() {
                   value={appointmentDisplay}
                   icon={Clock3}
                 />
-                <InfoField label="Trạng thái email" value={detail.emailStatus} icon={Mail} />
+                <InfoField label="Trạng thái email" value={detail?.emailStatus || ''} icon={Mail} />
               </div>
             </section>
           </div>
