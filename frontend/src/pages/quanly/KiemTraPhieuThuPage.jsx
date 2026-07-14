@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageTitle from '../../components/common/PageTitle.jsx'
 import api from '../../services/api.js'
 
@@ -222,6 +223,7 @@ function XemChiTietView({ detail, onBack }) {
 
 // Trang chính
 export default function KiemTraPhieuThuPage() {
+  const navigate = useNavigate()
   const [view, setView] = useState('list') // 'list' | 'kiem-tra' | 'xem-chi-tiet'
   const [canKiemTra, setCanKiemTra] = useState([])
   const [lichSu, setLichSu] = useState([])
@@ -248,8 +250,8 @@ export default function KiemTraPhieuThuPage() {
       ])
       setCanKiemTra(resCanKiemTra.data?.data || resCanKiemTra.data || [])
       setLichSu(resLichSu.data?.data || resLichSu.data || [])
-    } catch {
-      showToast('Không thể tải danh sách phiếu thu.', 'error')
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Không thể tải danh sách phiếu thu.', 'error')
     } finally {
       setLoading(false)
     }
@@ -290,7 +292,14 @@ export default function KiemTraPhieuThuPage() {
   }
 
   const handleCapNhat = (item) => {
-    showToast('Vui lòng chuyển sang chức năng "Cập nhật phiếu thu" để xử lý phiếu này.', 'error')
+    navigate('/quan-ly/cap-nhat-phieu-thu', {
+      state: {
+        openCapNhatPhieuThu: {
+          loaiPT: item.loaiPT,
+          maPT: item.maPhieuThu,
+        },
+      },
+    })
   }
 
   const handleLuuKetQua = async ({ trangThai, ghiChu }) => {
@@ -337,105 +346,119 @@ export default function KiemTraPhieuThuPage() {
 
   return (
     <section>
-      <div style={S.searchRow}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-          <div style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <IconSearch />
+      <div style={{ marginBottom: '16px' }}>
+        <PageTitle title="Kiểm tra phiếu thu" description="Kiểm tra và xác nhận tính hợp lệ của các phiếu thu đã thanh toán." />
+      </div>
+
+      <section style={S.panel}>
+        <div style={S.panelHead}>
+          <div>
+            <h3 style={S.panelTitle}>Danh sách phiếu thu cần kiểm tra</h3>
+            <p style={S.panelDesc}>Hiển thị các phiếu thu đã thanh toán và đang chờ quản lý kiểm tra.</p>
           </div>
-          <input
-            style={{ ...S.input, paddingLeft: '38px' }}
-            placeholder="Nhập mã phiếu thu"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleTimKiem() }}
-          />
         </div>
-        <button style={S.btnSearch} onClick={handleTimKiem} disabled={loading}>
-          Tìm kiếm
-        </button>
-      </div>
 
-      <div style={{ marginBottom: '16px', marginTop: '16px' }}>
-        <PageTitle title="Danh sách phiếu thu cần kiểm tra" description="Quản lý và đối soát các giao dịch thanh toán từ khách hàng." />
-      </div>
+        <div style={S.searchPanel}>
+          <div style={S.searchInputWrap}>
+            <div style={S.searchIconWrap}>
+              <IconSearch />
+            </div>
+            <input
+              style={{ ...S.searchInput, paddingLeft: '38px' }}
+              placeholder="Nhập mã phiếu thu"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleTimKiem() }}
+            />
+          </div>
+          <button style={S.btnSearch} onClick={handleTimKiem} disabled={loading}>
+            Tìm kiếm
+          </button>
+        </div>
 
-      <div style={{ ...S.tableWrap, maxHeight: '35vh', overflowY: 'auto' }}>
-        {loading ? (
-          <p style={S.emptyMsg}>Đang tải…</p>
-        ) : canKiemTra.length === 0 ? (
-          <p style={S.emptyMsg}>Không có phiếu thu nào cần kiểm tra.</p>
-        ) : (
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>MÃ PHIẾU THU</th>
-                <th style={S.th}>TÊN KHÁCH HÀNG</th>
-                <th style={S.th}>NGÀY TẠO PHIẾU</th>
-                <th style={S.th}>LOẠI PHIẾU THU</th>
-                <th style={S.th}>TRẠNG THÁI</th>
-                <th style={{ ...S.th, textAlign: 'center' }}>THAO TÁC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {canKiemTra.map(item => (
-                <tr key={item.maPhieuThu} style={S.tr}>
-                  <td style={S.td}><strong>{item.maPhieuThu}</strong></td>
-                  <td style={S.td}>{item.tenKhachHang}</td>
-                  <td style={S.td}>{item.ngayTaoPhieu}</td>
-                  <td style={S.td}>{item.loaiPhieuThu}</td>
-                  <td style={S.td}><StatusBadge status={item.trangThai} /></td>
-                  <td style={{ ...S.td, textAlign: 'center' }}>
-                    <button style={S.btnAction} onClick={() => handleMoKiemTra(item)}>Kiểm tra</button>
-                  </td>
+        <div style={{ ...S.tableWrap, maxHeight: '35vh', overflowY: 'auto' }}>
+          {loading ? (
+            <p style={S.emptyMsg}>Đang tải…</p>
+          ) : canKiemTra.length === 0 ? (
+            <p style={S.emptyMsg}>Không có phiếu thu nào cần kiểm tra.</p>
+          ) : (
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={S.th}>MÃ PHIẾU THU</th>
+                  <th style={S.th}>TÊN KHÁCH HÀNG</th>
+                  <th style={S.th}>NGÀY TẠO PHIẾU</th>
+                  <th style={S.th}>LOẠI PHIẾU THU</th>
+                  <th style={S.th}>TRẠNG THÁI</th>
+                  <th style={{ ...S.th, textAlign: 'center' }}>THAO TÁC</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {canKiemTra.map(item => (
+                  <tr key={item.maPhieuThu} style={S.tr}>
+                    <td style={S.td}><strong>{item.maPhieuThu}</strong></td>
+                    <td style={S.td}>{item.tenKhachHang}</td>
+                    <td style={S.td}>{item.ngayTaoPhieu}</td>
+                    <td style={S.td}>{item.loaiPhieuThu}</td>
+                    <td style={S.td}><StatusBadge status={item.trangThai} /></td>
+                    <td style={{ ...S.td, textAlign: 'center' }}>
+                      <button style={S.btnAction} onClick={() => handleMoKiemTra(item)}>Kiểm tra</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
 
-      <div style={{ marginBottom: '16px', marginTop: '28px' }}>
-        <PageTitle title="Lịch sử kiểm tra phiếu thu" description="Xem chi tiết các phiếu thu đã được kiểm tra." />
-      </div>
+      <section style={S.panel}>
+        <div style={S.panelHead}>
+          <div>
+            <h3 style={S.panelTitle}>Lịch sử kiểm tra phiếu thu</h3>
+            <p style={S.panelDesc}>Chỉ hiển thị các phiếu do chính bạn đã kiểm tra trong ngày.</p>
+          </div>
+        </div>
 
-      <div style={S.tableWrap}>
-        {loading ? (
-          <p style={S.emptyMsg}>Đang tải…</p>
-        ) : lichSu.length === 0 ? (
-          <p style={S.emptyMsg}>Chưa có phiếu thu nào được kiểm tra.</p>
-        ) : (
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>MÃ PHIẾU THU</th>
-                <th style={S.th}>TÊN KHÁCH HÀNG</th>
-                <th style={S.th}>NGÀY TẠO PHIẾU</th>
-                <th style={S.th}>LOẠI PHIẾU THU</th>
-                <th style={S.th}>TRẠNG THÁI</th>
-                <th style={{ ...S.th, textAlign: 'center' }}>THAO TÁC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lichSu.map(item => (
-                <tr key={item.maPhieuThu} style={S.tr}>
-                  <td style={S.td}><strong>{item.maPhieuThu}</strong></td>
-                  <td style={S.td}>{item.tenKhachHang}</td>
-                  <td style={S.td}>{item.ngayTaoPhieu}</td>
-                  <td style={S.td}>{item.loaiPhieuThu}</td>
-                  <td style={S.td}><StatusBadge status={item.trangThai} /></td>
-                  <td style={{ ...S.td, textAlign: 'center' }}>
-                    {item.trangThai === 'Không hợp lệ' && LOAI_CAP_NHAT.includes(item.loaiPhieuThu) ? (
-                      <button style={S.btnAction} onClick={() => handleCapNhat(item)}>Cập nhật</button>
-                    ) : (
-                      <button style={S.btnActionOutline} onClick={() => handleXemChiTiet(item)}>Xem chi tiết</button>
-                    )}
-                  </td>
+        <div style={S.tableWrap}>
+          {loading ? (
+            <p style={S.emptyMsg}>Đang tải…</p>
+          ) : lichSu.length === 0 ? (
+            <p style={S.emptyMsg}>Chưa có phiếu thu nào được kiểm tra trong ngày.</p>
+          ) : (
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={S.th}>MÃ PHIẾU THU</th>
+                  <th style={S.th}>TÊN KHÁCH HÀNG</th>
+                  <th style={S.th}>NGÀY TẠO PHIẾU</th>
+                  <th style={S.th}>LOẠI PHIẾU THU</th>
+                  <th style={S.th}>TRẠNG THÁI</th>
+                  <th style={{ ...S.th, textAlign: 'center' }}>THAO TÁC</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {lichSu.map(item => (
+                  <tr key={item.maPhieuThu} style={S.tr}>
+                    <td style={S.td}><strong>{item.maPhieuThu}</strong></td>
+                    <td style={S.td}>{item.tenKhachHang}</td>
+                    <td style={S.td}>{item.ngayTaoPhieu}</td>
+                    <td style={S.td}>{item.loaiPhieuThu}</td>
+                    <td style={S.td}><StatusBadge status={item.trangThai} /></td>
+                    <td style={{ ...S.td, textAlign: 'center' }}>
+                      {item.trangThai === 'Không hợp lệ' && LOAI_CAP_NHAT.includes(item.loaiPhieuThu) ? (
+                        <button style={S.btnAction} onClick={() => handleCapNhat(item)}>Cập nhật</button>
+                      ) : (
+                        <button style={S.btnActionOutline} onClick={() => handleXemChiTiet(item)}>Xem chi tiết</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
 
       {toast && <div style={{ ...S.toast, ...(toast.type === 'error' ? S.toastError : S.toastSuccess) }}>{toast.msg}</div>}
     </section>
@@ -444,6 +467,14 @@ export default function KiemTraPhieuThuPage() {
 
 const S = {
   input: { width: '100%', boxSizing: 'border-box', padding: '10px 14px', border: '1.5px solid #dde3d8', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', color: '#1a1f14', outline: 'none', backgroundColor: '#fff' },
+  panel: { backgroundColor: '#fff', border: '1px solid #dfe5da', borderRadius: '8px', padding: '20px', marginBottom: '20px' },
+  panelHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '8px' },
+  panelTitle: { margin: 0, fontSize: '22px', lineHeight: 1.3, color: '#1f2a17', fontWeight: 800 },
+  panelDesc: { margin: '6px 0 0', color: '#66705d', fontSize: '14px' },
+  searchPanel: { display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', backgroundColor: '#f8faf6', border: '1px solid #dfe5da', borderRadius: '6px', padding: '14px', margin: '16px 0 18px' },
+  searchInputWrap: { position: 'relative', minWidth: 0 },
+  searchIconWrap: { position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' },
+  searchInput: { width: '100%', minWidth: 0, boxSizing: 'border-box', border: '1px solid #d7ded1', borderRadius: '6px', padding: '11px 13px', outline: 'none', fontSize: '14px', fontFamily: 'inherit' },
   tableWrap: { maxWidth: '100%', border: '1px solid #dde3d8', borderRadius: '10px', backgroundColor: '#fff', overflowX: 'auto' },
   table: { width: '100%', minWidth: '760px', borderCollapse: 'collapse', fontSize: '14px' },
   th: { padding: '12px 18px', textAlign: 'left', backgroundColor: '#fff', color: '#6b7560', fontWeight: 700, fontSize: '12px', letterSpacing: '0.4px', borderBottom: '1px solid #dde3d8', position: 'sticky', top: 0, zIndex: 1 },
@@ -468,7 +499,6 @@ const S = {
   infoLabelSm: { fontSize: '12.5px', color: '#6b7560', fontWeight: 700, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.3px' },
   infoValue: { fontSize: '14.5px', color: '#1a1f14', fontWeight: 500 },
   infoValueMoney: { fontSize: '15px', color: '#2e7d32', fontWeight: 700 },
-  searchRow: { display: 'flex', gap: '10px', marginBottom: '12px', alignItems: 'stretch', flexWrap: 'wrap' },
   btnSearch: { padding: '10px 20px', backgroundColor: '#3b4f27', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   khachHangBox: { marginTop: '20px', paddingTop: '18px', borderTop: '1px solid #eef0eb' },
 
