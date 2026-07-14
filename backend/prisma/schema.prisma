@@ -119,10 +119,10 @@ model ho_so_tra_phong {
   ngay_huy           DateTime?            @db.Timestamp(6)
   nv_sale            String               @db.VarChar(20)
   ma_pdc             String               @db.VarChar(20)
-  ma_hdt             String               @db.VarChar(20)
-  ma_khach_thue      String               @db.VarChar(20)
+  ma_hdt             String?              @db.VarChar(20)
+  ma_khach_thue      String?              @db.VarChar(20)
   ghi_nhan_hu_hai    Boolean              @default(false)
-  khach_thue         khach_thue           @relation(fields: [ma_khach_thue, ma_hdt], references: [ma_kh, ma_hdt], onDelete: NoAction, onUpdate: NoAction)
+  khach_thue         khach_thue?          @relation(fields: [ma_khach_thue, ma_hdt], references: [ma_kh, ma_hdt], onDelete: NoAction, onUpdate: NoAction)
   phieu_dat_coc      phieu_dat_coc        @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
   nhanvien           nhanvien             @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   lich_hen_tra_phong lich_hen_tra_phong[]

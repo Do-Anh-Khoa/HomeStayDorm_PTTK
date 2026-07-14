@@ -1,55 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Search, ArrowLeft, UsersRound, UserRound, FileText, ClipboardList, Info } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { createReturnProfile, searchReturnProfiles } from '../../services/hoSoTraPhong.js'
 
 const PAGE_SIZE = 4
-
-const SEARCH_RESULTS = [
-  {
-    maPdc: 'PDC-2309-001',
-    maHopDong: 'HD-2309-001',
-    hoVaTen: 'Nguyễn Văn A',
-    cccd: '012345678910',
-    soDienThoai: '0901234567',
-    email: 'vana.nguyen@email.com',
-    phongGiuong: 'P.101 / G.01',
-    ngayVao: '2023-09-15',
-    trangThaiHopDong: 'Đang hiệu lực',
-  },
-  {
-    maPdc: 'PDC-2309-015',
-    maHopDong: '',
-    hoVaTen: 'Trần Thị B',
-    cccd: '023456789101',
-    soDienThoai: '0912345678',
-    email: 'tranthib@email.com',
-    phongGiuong: 'P.101 / G.03',
-    ngayVao: '2023-09-20',
-    trangThaiHopDong: '',
-  },
-  {
-    maPdc: 'PDC-2308-102',
-    maHopDong: 'HD-2308-102',
-    hoVaTen: 'Lê Hoàng C',
-    cccd: '034567891012',
-    soDienThoai: '0987654321',
-    email: 'lehoangc@email.com',
-    phongGiuong: 'P.101 / G.02',
-    ngayVao: '2023-08-01',
-    trangThaiHopDong: 'Đang hiệu lực',
-  },
-  {
-    maPdc: 'PDC-2307-055',
-    maHopDong: '',
-    hoVaTen: 'Phạm Thị D',
-    cccd: '045678910123',
-    soDienThoai: '0934567890',
-    email: 'phamthid@email.com',
-    phongGiuong: 'P.101 / G.04',
-    ngayVao: '2023-07-10',
-    trangThaiHopDong: '',
-  },
-]
+function getTodayDateInput() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 function formatDate(value) {
   if (!value) {
@@ -77,40 +38,50 @@ function DetailField({ label, value }) {
   )
 }
 
+function getRecordKey(row) {
+  if (row?.maHopDong) {
+    return `${row.maHopDong}-${row.maKhachThue || ''}`
+  }
+
+  return `PDC-${row?.maPdc || ''}`
+}
+
 export default function LapHoSoTraPhongPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const basePath = location.pathname.startsWith('/sale') ? '/sale/tra-phong' : '/quan-ly/tra-phong'
   const [searchValue, setSearchValue] = useState('P.101')
-  const [submittedKeyword, setSubmittedKeyword] = useState('')
+  const [results, setResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedRecordId, setSelectedRecordId] = useState('')
   const [viewMode, setViewMode] = useState('search')
   const [expectedReturnDate, setExpectedReturnDate] = useState('')
 
   const filteredRows = useMemo(() => {
-    const keyword = normalizeText(submittedKeyword)
-    if (!keyword) {
-      return []
-    }
-
-    return SEARCH_RESULTS.filter((row) =>
-      [row.maPdc, row.maHopDong, row.hoVaTen, row.soDienThoai, row.phongGiuong].some((value) =>
-        normalizeText(value).includes(keyword),
-      ),
-    )
-  }, [submittedKeyword])
+    return Array.isArray(results) ? results : []
+  }, [results])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
   const paginatedRows = filteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const selectedRecord = filteredRows.find((row) => (row.maHopDong || row.maPdc) === selectedRecordId) || null
+  const selectedRecord = filteredRows.find((row) => getRecordKey(row) === selectedRecordId) || null
 
   const handleSearch = () => {
-    setSubmittedKeyword(searchValue)
     setCurrentPage(1)
     setSelectedRecordId('')
     setViewMode('search')
     setExpectedReturnDate('')
+    const keyword = String(searchValue || '').trim()
+    if (!keyword) {
+      setResults([])
+      return
+    }
+
+    setIsSearching(true)
+    searchReturnProfiles(keyword)
+      .then((data) => setResults(Array.isArray(data) ? data : []))
+      .catch(() => setResults([]))
+      .finally(() => setIsSearching(false))
   }
 
   const handleContinue = () => {
@@ -119,6 +90,29 @@ export default function LapHoSoTraPhongPage() {
     }
 
     setViewMode('detail')
+  }
+
+  const handleCreate = async () => {
+    if (!selectedRecord) return
+    const hasContract = Boolean(selectedRecord.maHopDong)
+    if (hasContract && !expectedReturnDate) return
+
+    const confirmed = window.confirm('Bạn có muốn lập hồ sơ trả phòng cho khách hàng này không?')
+    if (!confirmed) return
+
+    try {
+      const created = await createReturnProfile({
+        maPdc: selectedRecord.maPdc,
+        maHopDong: selectedRecord.maHopDong,
+        maKhachThue: selectedRecord.maKhachThue,
+        ngayTraPhongDuKien: hasContract ? expectedReturnDate : '',
+      })
+
+      window.alert(created?.message || 'Lập hồ sơ trả phòng thành công.')
+      navigate(basePath)
+    } catch (error) {
+      window.alert(error?.response?.data?.message || 'Không thể lập hồ sơ trả phòng.')
+    }
   }
 
   if (viewMode === 'detail' && selectedRecord) {
@@ -170,9 +164,9 @@ export default function LapHoSoTraPhongPage() {
 
                 <div className="grid gap-5 rounded-[12px] border border-[#d9ddd2] bg-[#fcfcfa] px-5 py-5 md:grid-cols-4">
                   <DetailField label={hasContract ? 'Mã hợp đồng' : 'Mã PDC'} value={selectedRecord.maHopDong || selectedRecord.maPdc} />
-                  <DetailField label="Phòng/Giường" value={selectedRecord.phongGiuong.replace('/', '-')} />
+                  <DetailField label="Phòng/Giường" value={String(selectedRecord.phongGiuong || '').replace('/', '-')} />
                   <DetailField label="Ngày bắt đầu" value={formatDate(selectedRecord.ngayVao)} />
-                  <DetailField label="Trạng thái" value={selectedRecord.trangThaiHopDong || 'Chưa lập hợp đồng'} />
+                  <DetailField label="Trạng thái" value={selectedRecord.trangThaiHopDong || 'Đang hiệu lực'} />
                 </div>
               </section>
 
@@ -204,6 +198,7 @@ export default function LapHoSoTraPhongPage() {
                         type="date"
                         value={expectedReturnDate}
                         onChange={(event) => setExpectedReturnDate(event.target.value)}
+                        min={getTodayDateInput()}
                         className="h-[48px] w-full rounded-[10px] border border-[#d7dbd1] bg-white px-4 text-[15px] text-[#31372b] outline-none transition focus:border-[#9ead89]"
                       />
                     </label>
@@ -224,7 +219,13 @@ export default function LapHoSoTraPhongPage() {
             <div className="flex flex-col-reverse gap-3 border-t border-[#e3e7de] px-5 py-4 sm:px-6 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={() => setViewMode('search')}
+                onClick={() => {
+                  const confirmed = window.confirm('Bạn có chắc chắn muốn hủy thao tác lập hồ sơ trả phòng không?')
+                  if (confirmed) {
+                    setViewMode('search')
+                    setExpectedReturnDate('')
+                  }
+                }}
                 className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-[#cfd5c8] bg-white px-6 text-[14px] font-semibold text-[#676d63] transition hover:bg-[#f5f7f1]"
               >
                 Hủy
@@ -233,6 +234,7 @@ export default function LapHoSoTraPhongPage() {
               <button
                 type="button"
                 disabled={hasContract && !expectedReturnDate}
+                onClick={handleCreate}
                 className="inline-flex h-[44px] items-center justify-center gap-2 rounded-[10px] bg-[#4b6132] px-6 text-[14px] font-semibold text-white transition hover:bg-[#42572c] disabled:cursor-not-allowed disabled:bg-[#bfc7b8]"
               >
                 <FileText size={15} />
@@ -318,7 +320,7 @@ export default function LapHoSoTraPhongPage() {
 
                     <tbody>
                       {paginatedRows.map((row) => {
-                        const recordId = row.maHopDong || row.maPdc
+                        const recordId = getRecordKey(row)
                         const isSelected = selectedRecordId === recordId
 
                         return (
@@ -394,7 +396,7 @@ export default function LapHoSoTraPhongPage() {
                   </div>
 
                   <h3 className="mt-6 text-[30px] font-extrabold tracking-[-0.02em] text-[#2e332a]">
-                    Chưa có thông tin khách thuê
+                    {isSearching ? 'Đang tìm kiếm...' : 'Chưa có thông tin khách thuê'}
                   </h3>
                   <p className="mt-3 text-[16px] leading-[1.7] text-[#6d7268]">
                     Nhập mã phòng hoặc CCCD để tra cứu hợp đồng thuê hoặc phiếu đặt cọc còn hiệu lực.

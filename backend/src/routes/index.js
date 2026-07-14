@@ -22,6 +22,7 @@ import vatDungHuHaiRoutes from './vat-dung-hu-hai.routes.js'
 import boiThuongRoutes from './boi-thuong.routes.js'
 import banGiaoRoutes from './ban-giao.routes.js'
 import ptTraPhongRoutes from './pt-tra-phong.routes.js'
+import hoSoTraPhongRoutes from './ho-so-tra-phong.routes.js'
 import keToanDashboardRoutes from './ke-toan-dashboard.routes.js'
 import phieuThuBoiThuongRoutes from './phieuThuBoiThuongRoutes.js'
 import phieuThuDatCocRoutes from './phieuThuDatCocRoutes.js'
@@ -56,6 +57,7 @@ router.use('/vat-dung-hu-hai', authMiddleware, vatDungHuHaiRoutes)
 router.use('/boi-thuong', authMiddleware, boiThuongRoutes)
 router.use('/ban-giao', authMiddleware, banGiaoRoutes)
 router.use('/pt-tra-phong', authMiddleware, ptTraPhongRoutes)
+router.use('/ho-so-tra-phong', authMiddleware, hoSoTraPhongRoutes)
 router.use('/ke-toan', authMiddleware, keToanDashboardRoutes)
 router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
 router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
