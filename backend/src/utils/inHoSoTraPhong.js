@@ -21,7 +21,6 @@ function getValue(source, ...keys) {
       return source[key]
     }
   }
-
   return ''
 }
 
@@ -93,23 +92,29 @@ function drawMeta(doc, F, rows) {
   const x = PAGE_MARGIN
   const y = doc.y
   const width = doc.page.width - PAGE_MARGIN * 2
-  const height = 38
+  const height = 56
   const columnWidth = width / 2
 
   doc.save()
   doc.roundedRect(x, y, width, height, 5).fillAndStroke(COLOR_SOFT, COLOR_BORDER)
+
   doc.font(F(false)).fontSize(9).fillColor(COLOR_MUTED)
-  doc.text(rows[0].label, x + 12, y + 8, { width: columnWidth - 24 })
-  doc.text(rows[1].label, x + columnWidth + 12, y + 8, { width: columnWidth - 24 })
+  doc.text(rows[0].label, x + 12, y + 10, { width: columnWidth - 24 })
+  doc.text(rows[1].label, x + columnWidth + 12, y + 10, { width: columnWidth - 24 })
+
   doc.font(F(true)).fontSize(10).fillColor(COLOR_TEXT)
-  doc.text(rows[0].value, x + 12, y + 21, { width: columnWidth - 24 })
-  doc.text(rows[1].value, x + columnWidth + 12, y + 21, { width: columnWidth - 24 })
+  doc.text(rows[0].value, x + 12, y + 30, { width: columnWidth - 24 })
+  doc.text(rows[1].value, x + columnWidth + 12, y + 30, { width: columnWidth - 24 })
   doc.restore()
 
-  doc.y = y + height + 22
+  doc.y = y + height + 10
 }
 
 function drawSectionTitle(doc, F, title) {
+  if (doc.y + 30 > doc.page.height - PAGE_MARGIN) {
+    doc.addPage()
+  }
+
   doc.font(F(true)).fontSize(13).fillColor(COLOR_TITLE)
   doc.text(title, PAGE_MARGIN, doc.y)
   doc.moveTo(PAGE_MARGIN, doc.y + 4)
@@ -128,6 +133,10 @@ function drawFieldGrid(doc, F, fields) {
   const rowHeight = 52
 
   for (let index = 0; index < fields.length; index += 2) {
+    if (doc.y + rowHeight > doc.page.height - PAGE_MARGIN) {
+      doc.addPage()
+    }
+
     const y = doc.y
     const rowFields = fields.slice(index, index + 2)
 
@@ -157,9 +166,14 @@ function drawFieldGrid(doc, F, fields) {
 }
 
 function drawNoteBox(doc, F) {
+  const height = 74
+
+  if (doc.y + height > doc.page.height - PAGE_MARGIN) {
+    doc.addPage()
+  }
+
   const x = PAGE_MARGIN
   const width = doc.page.width - PAGE_MARGIN * 2
-  const height = 74
   const y = doc.y
 
   doc.save()
@@ -177,44 +191,51 @@ function drawNoteBox(doc, F) {
 }
 
 function drawSignatures(doc, F, { customerName, employeeName }) {
-  const x = PAGE_MARGIN
-  const width = doc.page.width - PAGE_MARGIN * 2
-  const columnWidth = width / 2
-  const y = doc.y
-
-  const drawSignature = (columnIndex, title, name) => {
-    const signX = x + columnIndex * columnWidth
-    doc.font(F(true)).fontSize(11).fillColor(COLOR_TEXT)
-    doc.text(title, signX, y, { width: columnWidth, align: 'center' })
-    doc.font(F(false)).fontSize(9).fillColor(COLOR_MUTED)
-    doc.text('(Ký và ghi rõ họ tên)', signX, y + 17, {
-      width: columnWidth,
-      align: 'center',
-    })
-    doc.font(F(true)).fontSize(10).fillColor(COLOR_TEXT)
-    doc.text(display(name), signX, y + 76, {
-      width: columnWidth,
-      align: 'center',
-    })
+  if (doc.y + 80 > doc.page.height - PAGE_MARGIN) {
+    doc.addPage()
   }
 
-  drawSignature(0, 'Khách thuê', customerName)
-  drawSignature(1, 'Nhân viên lập hồ sơ', employeeName)
+  const leftX = PAGE_MARGIN
+  const rightX = doc.page.width - PAGE_MARGIN
+  const baseY = doc.y + 8
+
+  doc.font(F(true)).fontSize(9).fillColor(COLOR_TEXT)
+  doc.text('Nhân viên lập hồ sơ', leftX, baseY, { width: 160 })
+  doc.text('Khách hàng', rightX - 120, baseY, { width: 120, align: 'center' })
+
+  const signLineY = baseY + 20
+  doc.moveTo(leftX, signLineY).lineTo(leftX + 180, signLineY).strokeColor(COLOR_BORDER).lineWidth(1).stroke()
+  doc.moveTo(rightX - 180, signLineY).lineTo(rightX, signLineY).strokeColor(COLOR_BORDER).lineWidth(1).stroke()
+
+  doc.font(F(false)).fontSize(9).fillColor(COLOR_MUTED)
+  doc.text(' (Ký & ghi rõ họ tên)', leftX, signLineY + 6, { width: 180 })
+  doc.text(' (Ký & ghi rõ họ tên)', rightX - 180, signLineY + 6, { width: 180, align: 'center' })
+
+  doc.font(F(true)).fontSize(10).fillColor(COLOR_TEXT)
+  doc.text(display(employeeName || '--'), leftX, signLineY + 24, { width: 180 })
+  doc.text(display(customerName || '--'), rightX - 180, signLineY + 24, { width: 180, align: 'center' })
+
+  doc.moveDown(2)
 }
 
 export const inHoSoTraPhong = (profile) =>
   new Promise((resolve, reject) => {
     try {
-      const maHoSo = getValue(profile, 'maHoSo', 'ma_tp')
+      const maHoSo = getValue(profile, 'maHoSo', 'ma_tp') || `HSTP_${Date.now()}`
       const isDepositCase = !getValue(profile, 'maHopDong', 'ma_hdt')
-      const outDir = getValue(profile, '__outputDir') || path.join(__dirname, '../../storage/ho-so-tra-phong')
-
+      
+      // Khởi tạo thư mục và đường dẫn y hệt bên inHopDongThue
+      const outDir = path.join(__dirname, '../../storage/ho-so-tra-phong')
       if (!fs.existsSync(outDir)) {
         fs.mkdirSync(outDir, { recursive: true })
       }
 
       const filePath = path.join(outDir, `${maHoSo}.pdf`)
-      const doc = new PDFDocument({ size: 'A4', margin: PAGE_MARGIN })
+      const doc = new PDFDocument({ 
+        size: 'A4', 
+        margin: PAGE_MARGIN,
+        bufferPages: true // Thêm thuộc tính này cho giống inHopDongThue
+      })
       const stream = fs.createWriteStream(filePath)
       doc.pipe(stream)
 
