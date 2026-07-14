@@ -2,7 +2,8 @@ import dns from 'dns/promises'
 import nodemailer from 'nodemailer'
 import { Prisma } from '@prisma/client'
 import prisma from '../config/prisma.js'
-
+import PhieuDatCocDB from '../database/PhieuDatCocDB.js' 
+import { inPhieuDatCoc } from '../utils/inPhieuDatCoc.js'
 const TRANG_THAI_HO_SO_HOP_LE = ['Đã hẹn']
 const TRANG_THAI_GIUONG_TRONG = 'Trống'
 const TRANG_THAI_GIUONG_DA_COC = 'Đã đặt cọc'
@@ -302,5 +303,133 @@ export async function createPhieuDatCoc(req, res) {
       message: error.message || 'Không thể lập phiếu đặt cọc.',
       data: error.data || null,
     })
+  }
+}
+export async function getPhieuDatCocList(req, res) {
+  try {
+    const maCn = req.auth?.ma_cn || ''
+    const search = req.query.search || ''
+
+    if (!maCn) {
+      return res.status(401).json({ message: 'Bạn chưa đăng nhập.' })
+    }
+
+    const rows = await prisma.$queryRaw`
+      SELECT
+        pdc.ma_pdc AS "maPDC",
+        pdc.ngay_dc AS "ngayLap",
+        pdc.trang_thai AS "trangThai",
+        kh.ten_kh AS "tenKH",
+        kh.cccd AS "cccd",
+        kh.sdt AS "sdt",
+        kh.email AS "email",
+        ptdc.ma_ptdc AS "ptMa",
+        ptdc.trang_thai AS "ptTrangThai",
+        COALESCE(
+          (SELECT string_agg(DISTINCT ma_phong, ', ') FROM dat_coc_giuong WHERE ma_pdc = pdc.ma_pdc),
+          ''
+        ) AS "phong",
+        COALESCE(
+          (SELECT string_agg(DISTINCT ma_giuong, ', ') FROM dat_coc_giuong WHERE ma_pdc = pdc.ma_pdc),
+          ''
+        ) AS "giuong",
+        COALESCE(
+          (
+            SELECT SUM(lp.gia_giuong * 2)
+            FROM dat_coc_giuong dcg
+            JOIN phong p ON p.ma_phong = dcg.ma_phong
+            JOIN loai_phong lp ON lp.ma_loai = p.ma_loai
+            WHERE dcg.ma_pdc = pdc.ma_pdc
+          ),
+          0
+        ) AS "soTien"
+      FROM phieu_dat_coc pdc
+      JOIN khach_hang kh ON kh.ma_kh = pdc.khach_dat
+      JOIN nhanvien nv ON nv.ma_nv = pdc.nv_sale
+      LEFT JOIN pt_dat_coc ptdc ON ptdc.ma_pdc = pdc.ma_pdc
+      WHERE nv.ma_cn = ${maCn}
+        AND (
+          ${search} = '' OR
+          pdc.ma_pdc ILIKE '%' || ${search} || '%' OR
+          kh.ten_kh ILIKE '%' || ${search} || '%' OR
+          kh.cccd ILIKE '%' || ${search} || '%' OR
+          kh.sdt ILIKE '%' || ${search} || '%'
+        )
+      ORDER BY pdc.ngay_dc DESC
+    `
+
+    const items = rows.map(row => {
+      const ngayLapDate = new Date(row.ngayLap)
+      const hanTTDate = new Date(ngayLapDate.getTime() + 24 * 60 * 60 * 1000)
+
+      return {
+        ...row,
+        soTien: Number(row.soTien || 0),
+        ngayLap: ngayLapDate.toLocaleDateString('vi-VN'),
+        hanTT: hanTTDate.toLocaleDateString('vi-VN') + ' ' + hanTTDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        ptMa: row.ptMa || '',
+        ptTrangThai: row.ptTrangThai || 'Chưa thanh toán'
+      }
+    })
+
+    res.json({ items })
+  } catch (error) {
+    res.status(500).json({ message: 'Không thể tải danh sách phiếu đặt cọc.' })
+  }
+}
+
+export async function cancelPhieuDatCoc(req, res) {
+  try {
+    const { maPDC } = req.params
+    await prisma.phieu_dat_coc.update({
+      where: { ma_pdc: maPDC },
+      data: { trang_thai: 'Đã hủy' }
+    })
+    res.json({ message: 'Hủy phiếu thành công.' })
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi khi hủy phiếu.' })
+  }
+}
+
+export async function printPhieuDatCoc(req, res) {
+  try {
+    const { maPDC } = req.params
+    const pdc = await PhieuDatCocDB.LayTheoMaDatCoc(maPDC)
+    if (!pdc) return res.status(404).json({ message: 'Không tìm thấy phiếu.' })
+
+    const chiTiet = await prisma.$queryRaw`
+      SELECT string_agg(DISTINCT dcg.ma_phong, ', ') as phong,
+             string_agg(DISTINCT dcg.ma_giuong, ', ') as giuong,
+             SUM(lp.gia_giuong * 2) as "soTien",
+             MAX(cn.ten_cn) as "coSo"
+      FROM dat_coc_giuong dcg
+      JOIN phong p ON p.ma_phong = dcg.ma_phong
+      JOIN loai_phong lp ON lp.ma_loai = p.ma_loai
+      JOIN chi_nhanh cn ON p.chi_nhanh = cn.ma_cn
+      WHERE dcg.ma_pdc = ${maPDC}
+      GROUP BY dcg.ma_pdc
+    `
+
+    const nhanVien = await prisma.nhanvien.findUnique({
+      where: { ma_nv: pdc.maNVSale },
+      select: { ten_nv: true }
+    })
+    
+    const tienCoc = chiTiet[0]?.soTien ? Number(chiTiet[0].soTien) : 0
+
+    const dataIn = { 
+      ...pdc, 
+      phong: chiTiet[0]?.phong || 'N/A', 
+      giuong: chiTiet[0]?.giuong || 'N/A', 
+      coSo: chiTiet[0]?.coSo || 'Chưa cập nhật',
+      soTien: tienCoc,
+      tenNVSale: nhanVien?.ten_nv || pdc.maNVSale
+    }
+
+    const filePath = await inPhieuDatCoc(dataIn)
+    res.download(filePath)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Lỗi server khi tạo file in.' })
   }
 }

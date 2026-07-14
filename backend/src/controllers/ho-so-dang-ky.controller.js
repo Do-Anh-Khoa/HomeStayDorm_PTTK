@@ -89,7 +89,7 @@ export async function updateHoSoDangKy(req, res, next) {
 
     if (existingRecord.trang_thai !== 'Mới tiếp nhận' && existingRecord.trang_thai !== 'Đã hẹn') {
       return res.status(400).json({ 
-        message: 'Chỉ được phép chỉnh sửa hồ sơ ở trạng thái Mới tiếp nhận.' 
+        message: 'Chỉ được phép chỉnh sửa hồ sơ ở trạng thái Mới tiếp nhận hoặc Đã hẹn.' 
       })
     }
 
