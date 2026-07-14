@@ -61,6 +61,8 @@ export async function searchKhachTraPhong({ keyword, maCn }) {
         ),
         ''
       ) AS "phongGiuong"
+      ,
+      hdt.tg_tao_hd AS "sortTime"
     FROM hop_dong_thue hdt
     JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hdt.ma_pdc
     JOIN khach_thue kt ON kt.ma_hdt = hdt.ma_hdt
@@ -121,6 +123,8 @@ export async function searchKhachTraPhong({ keyword, maCn }) {
         ),
         ''
       ) AS "phongGiuong"
+      ,
+      pdc.ngay_dc AS "sortTime"
     FROM phieu_dat_coc pdc
     JOIN khach_hang kh ON kh.ma_kh = pdc.khach_dat
     WHERE pdc.trang_thai = 'Hoàn tất'
@@ -166,17 +170,19 @@ export async function searchKhachTraPhong({ keyword, maCn }) {
     LIMIT 50
   `
 
-  return [...contractRows, ...depositOnlyRows].map((row) => ({
-    maPdc: row.maPdc,
-    maHopDong: row.maHopDong,
-    maKhachThue: row.maKhachThue,
-    hoVaTen: row.hoVaTen,
-    cccd: row.cccd,
-    soDienThoai: row.soDienThoai,
-    email: row.email,
-    phongGiuong: row.phongGiuong,
-    ngayVao: row.ngayVao ? new Date(row.ngayVao).toISOString().slice(0, 10) : '',
-  }))
+  return [...contractRows, ...depositOnlyRows]
+    .sort((a, b) => new Date(b.sortTime || 0).getTime() - new Date(a.sortTime || 0).getTime())
+    .map((row) => ({
+      maPdc: row.maPdc,
+      maHopDong: row.maHopDong,
+      maKhachThue: row.maKhachThue,
+      hoVaTen: row.hoVaTen,
+      cccd: row.cccd,
+      soDienThoai: row.soDienThoai,
+      email: row.email,
+      phongGiuong: row.phongGiuong,
+      ngayVao: row.ngayVao ? new Date(row.ngayVao).toISOString().slice(0, 10) : '',
+    }))
 }
 
 export async function createHoSoTraPhong({
@@ -483,6 +489,8 @@ export async function getChiTietHoSoTraPhong({ maTP, maCn }) {
       h.ma_pdc AS "maPdc",
       h.ma_hdt AS "maHopDong",
       h.ngay_tp AS "ngayLap",
+      h.nv_sale AS "maNhanVienLap",
+      nv.ten_nv AS "nhanVienLap",
       kh.ten_kh AS "hoVaTen",
       kh.cccd AS "cccd",
       kh.sdt AS "soDienThoai",
@@ -524,6 +532,7 @@ export async function getChiTietHoSoTraPhong({ maTP, maCn }) {
     FROM ho_so_tra_phong h
     JOIN phieu_dat_coc pdc ON pdc.ma_pdc = h.ma_pdc
     JOIN khach_hang kh ON kh.ma_kh = COALESCE(h.ma_khach_thue, pdc.khach_dat)
+    JOIN nhanvien nv ON nv.ma_nv = h.nv_sale
     LEFT JOIN hop_dong_thue hdt ON hdt.ma_hdt = h.ma_hdt
     LEFT JOIN LATERAL (
       SELECT tg_hen

@@ -87,8 +87,18 @@ async function getHoSoDangKyById(db, maDk) {
   return mapProfileRow(rows[0])
 }
 
-function buildListWhereSql({ keyword = '', normalizedStatus = '' } = {}) {
+function buildListWhereSql({ keyword = '', normalizedStatus = '', showTodayOnly = false } = {}) {
   const conditions = []
+
+  if (showTodayOnly) {
+    conditions.push(Prisma.sql`
+      (h."ngay_lap" + INTERVAL '7 hour') >=
+        date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')
+      AND
+      (h."ngay_lap" + INTERVAL '7 hour') <
+        date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh') + INTERVAL '1 day'
+    `)
+  }
 
   if (normalizedStatus && normalizedStatus !== 'Tất cả trạng thái') {
     conditions.push(Prisma.sql`h."trang_thai" = ${normalizedStatus}`)
@@ -109,7 +119,12 @@ function buildListWhereSql({ keyword = '', normalizedStatus = '' } = {}) {
     return Prisma.empty
   }
 
-  return Prisma.sql`WHERE ${Prisma.join(conditions, Prisma.sql` AND `)}`
+  const combinedConditions = conditions.slice(1).reduce(
+    (sql, condition) => Prisma.sql`${sql} AND ${condition}`,
+    conditions[0],
+  )
+
+  return Prisma.sql`WHERE ${combinedConditions}`
 }
 
 export async function getHoSoDangKyFormSnapshot({ maCn = '' } = {}) {
@@ -312,11 +327,12 @@ export async function getHoSoDangKyListSnapshot({
 } = {}) {
   const keyword = String(search || '').trim()
   const normalizedStatus = String(status || '').trim()
+  const showTodayOnly = keyword === ''
 
   const safePage = Math.max(1, Number(page) || 1)
   const safePageSize = Math.max(1, Number(pageSize) || 4)
   const offset = (safePage - 1) * safePageSize
-  const whereSql = buildListWhereSql({ keyword, normalizedStatus })
+  const whereSql = buildListWhereSql({ keyword, normalizedStatus, showTodayOnly })
 
   const [countRows, items] = await prisma.$transaction([
     prisma.$queryRaw`
