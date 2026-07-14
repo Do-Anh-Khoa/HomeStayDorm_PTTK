@@ -87,7 +87,7 @@ export async function updateHoSoDangKy(req, res, next) {
       return res.status(404).json({ message: 'Không tìm thấy hồ sơ đăng ký.' })
     }
 
-    if (existingRecord.trang_thai !== 'Mới tiếp nhận') {
+    if (existingRecord.trang_thai !== 'Mới tiếp nhận' && existingRecord.trang_thai !== 'Đã hẹn') {
       return res.status(400).json({ 
         message: 'Chỉ được phép chỉnh sửa hồ sơ ở trạng thái Mới tiếp nhận.' 
       })

@@ -77,11 +77,11 @@ export default function ChinhSuaHoSoDangKyPage() {
         const data = detailData
         setStatusName(data.status)
      
-        if (data.status !== 'Mới tiếp nhận') {
+        // SỬA Ở ĐÂY: Cho phép Mới tiếp nhận và Đã hẹn
+        if (data.status !== 'Mới tiếp nhận' && data.status !== 'Đã hẹn') {
           setIsEditable(false)
         }
 
-        // Xử lý định dạng ngày từ DD/MM/YYYY của Backend sang YYYY-MM-DD cho thẻ <input type="date">
         let parsedDate = ''
         if (data.moveInDate) {
           if (data.moveInDate.includes('/')) {
@@ -92,7 +92,6 @@ export default function ChinhSuaHoSoDangKyPage() {
           }
         }
 
-        // Bóc tách ID cho Select (Ví dụ: "3 tháng" -> "3", "CN001 - HomeStay..." -> "CN001")
         const parsedDuration = String(data.duration || '').replace(/\D/g, '') || '3'
         const parsedBranch = String(data.branch || '').split(' ')[0]
         const parsedRentType = String(data.rentType || '').includes('Nguyên phòng') ? 'Nguyên phòng' : 'Theo giường'
@@ -150,12 +149,10 @@ export default function ChinhSuaHoSoDangKyPage() {
 
     setSubmitting(true)
     try {
-      // --- TẨY RỬA DỮ LIỆU ---
       const cleanedData = {
         ...formData,
         soDienThoai: formData.soDienThoai.replace(/\s+/g, ''), 
         cccd: formData.cccd.replace(/\s+/g, ''),
-        // Chuyển string thành số để khớp với Backend
         soLuongNguoi: parseInt(formData.soLuongNguoi, 10), 
         thoiHanThue: parseInt(formData.thoiHanThue, 10)
       }
@@ -170,6 +167,7 @@ export default function ChinhSuaHoSoDangKyPage() {
   }
 
   if (loading) return <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
+  if (!formData) return <div className="p-8 text-center text-gray-500">Không tìm thấy thông tin hồ sơ.</div>
 
   return (
     <section className="relative space-y-6 pb-8">
@@ -185,7 +183,7 @@ export default function ChinhSuaHoSoDangKyPage() {
               Thông tin hồ sơ đã được hệ thống cập nhật thành công.
             </p>
             <button
-              onClick={() => navigate(`/sale/ho-so-dang-ky/${maDk}`)}
+              onClick={() => navigate('/sale/ho-so-dang-ky')}
               className="mt-6 w-full rounded-lg bg-[#3f5227] py-3 text-[15px] font-semibold text-white transition hover:bg-[#344420]"
             >
               ← Quay lại danh sách
@@ -206,7 +204,8 @@ export default function ChinhSuaHoSoDangKyPage() {
           {/* Badge trạng thái */}
           <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase ${
             statusName === 'Mới tiếp nhận' ? 'bg-[#dbeafe] text-[#1e40af]' : 
-            statusName === 'Đã chốt cọc' ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-gray-100 text-gray-600'
+            statusName === 'Đã hẹn' ? 'bg-[#dfe9ff] text-[#4a79d9]' :
+            statusName === 'Đã chốt cọc' ? 'bg-[#dfeccf] text-[#6f9251]' : 'bg-gray-100 text-gray-600'
           }`}>
             {statusName}
           </span>
@@ -387,7 +386,7 @@ export default function ChinhSuaHoSoDangKyPage() {
         <div className="mt-10 flex justify-end gap-3 border-t border-[#edf0ea] pt-6">
           <button
             type="button"
-            onClick={() => navigate(`/sale/ho-so-dang-ky/${maDk}`)}
+            onClick={() => navigate('/sale/ho-so-dang-ky')}
             className="h-[44px] rounded-md px-6 font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 transition"
           >
             Hủy bỏ
