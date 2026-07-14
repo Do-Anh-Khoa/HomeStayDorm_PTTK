@@ -9,8 +9,6 @@ const formatMoney = (value) => {
   return raw ? Number(raw).toLocaleString('vi-VN') : '0'
 }
 
-// Loại phiếu thu nào cho phép "Xem chi tiết" (chỉ đọc) sau khi đã kiểm tra
-const LOAI_XEM_CHI_TIET = ['Đặt cọc', 'Hợp đồng']
 // Loại phiếu thu cho phép "Cập nhật" khi phiếu ở trạng thái Không hợp lệ
 const LOAI_CAP_NHAT = ['Trả phòng', 'Bồi thường']
 
