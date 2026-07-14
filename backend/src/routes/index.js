@@ -25,6 +25,7 @@ import ptTraPhongRoutes from './pt-tra-phong.routes.js'
 import keToanDashboardRoutes from './ke-toan-dashboard.routes.js'
 import phieuThuBoiThuongRoutes from './phieuThuBoiThuongRoutes.js'
 import phieuThuDatCocRoutes from './phieuThuDatCocRoutes.js'
+import phieuThuHopDongRoutes from './phieuThuHopDongRoutes.js'
 import capNhatPhieuThuQLRoutes from './capNhatPhieuThuQLRoutes.js'
 import capNhatPhieuThuSaleRoutes from './capNhatPhieuThuSaleRoutes.js'
 import phieuDatCocRoutes from './phieu-dat-coc.routes.js'
@@ -58,6 +59,7 @@ router.use('/pt-tra-phong', authMiddleware, ptTraPhongRoutes)
 router.use('/ke-toan', authMiddleware, keToanDashboardRoutes)
 router.use('/phieu-thu-boi-thuong', authMiddleware, phieuThuBoiThuongRoutes)
 router.use('/phieu-thu-dat-coc', authMiddleware, phieuThuDatCocRoutes)
+router.use('/phieu-thu-hop-dong', authMiddleware, phieuThuHopDongRoutes)
 router.use('/cap-nhat-phieu-thu-ql', authMiddleware, capNhatPhieuThuQLRoutes)
 router.use('/cap-nhat-phieu-thu-sale', authMiddleware, capNhatPhieuThuSaleRoutes)
 
