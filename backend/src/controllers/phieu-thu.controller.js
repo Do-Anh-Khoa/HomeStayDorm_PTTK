@@ -332,6 +332,24 @@ const loadReceiptDetail = async (maPhieuThu, maCN) => {
   return mapEntityToPayload(config, entity)
 }
 
+const updateServiceDetailsToPaidForReturnReceipt = async (tx, maPttp) => {
+  const serviceRows = await tx.$queryRaw`
+    SELECT ma_ct
+    FROM chi_tiet_dv
+    WHERE ma_pttp = ${maPttp}
+      AND trang_thai = 'Chưa thanh toán'
+  `
+
+  if (!serviceRows.length) return
+
+  await tx.$executeRaw`
+    UPDATE chi_tiet_dv
+    SET trang_thai = 'Đã thanh toán'
+    WHERE ma_pttp = ${maPttp}
+      AND trang_thai = 'Chưa thanh toán'
+  `
+}
+
 export const getCanKiemTraReceipts = async (req, res) => {
   try {
     const nvHienTai = await layNhanVienQuanLyDangNhap(req, res)
@@ -443,6 +461,10 @@ export const verifyReceipt = async (req, res) => {
             data: { trang_thai: 'Hoàn tất' },
           })
         }
+      }
+
+      if (config.typeKey === 'tra-phong' && trangThai === 'Hợp lệ') {
+        await updateServiceDetailsToPaidForReturnReceipt(tx, maPhieuThu)
       }
     })
 
