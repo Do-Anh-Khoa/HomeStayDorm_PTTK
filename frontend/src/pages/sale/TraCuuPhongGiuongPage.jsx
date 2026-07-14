@@ -279,7 +279,9 @@ export default function TraCuuPhongGiuongPage() {
 
   const [selectedRoom, setSelectedRoom] = useState(null)
   const createdProfile = location.state?.createdProfile
-  const shouldShowEditButton = Boolean(createdProfile)
+  const isSearchHSDK = search && search.trim().toUpperCase().startsWith('HSDK')
+  const shouldShowEditButton = Boolean(createdProfile) || isSearchHSDK
+  
 
   const setFilter = (key, value) => {
     setFilters(current => ({
@@ -398,18 +400,23 @@ export default function TraCuuPhongGiuongPage() {
   }
 
   const handleEditRegistration = () => {
+    let maHoSo = null;
+
     if (createdProfile) {
-      console.log('Debug createdProfile:', createdProfile); // 
+     
+      maHoSo = createdProfile.ma_dk || createdProfile.id || createdProfile.maDk; 
+    } else if (isSearchHSDK) {
       
-      
-      const maHoSo = createdProfile.ma_dk || createdProfile.id || createdProfile.maDk; 
-      
-      if (!maHoSo) {
-        window.alert('Không tìm thấy mã hồ sơ trong dữ liệu!');
-        return;
-      }
-      navigate(`/sale/ho-so-dang-ky/chinh-sua/${maHoSo}`)
+      maHoSo = search.trim().toUpperCase();
     }
+
+    if (!maHoSo) {
+      window.alert('Không tìm thấy mã hồ sơ để chỉnh sửa!');
+      return;
+    }
+    
+    
+    navigate(`/sale/ho-so-dang-ky/chinh-sua/${maHoSo}`)
   }
 
   return (
