@@ -96,6 +96,61 @@ function ConfirmPopup({ saving, onCancel, onConfirm }) {
   )
 }
 
+function ConfirmPreviewPopup({ row, loading, onCancel, onConfirm }) {
+  if (!row) return null
+
+  return (
+    <div style={S.popupOverlay}>
+      <div style={S.confirmPreviewPopup}>
+        <h2 style={S.confirmTitle}>Xác nhận lập phiếu trả phòng</h2>
+
+        <p style={S.confirmText}>
+          Bạn có chắc chắn muốn lập phiếu thu trả phòng cho hồ sơ này không?
+        </p>
+
+        <div style={S.confirmPreviewInfoBox}>
+          <div>
+            <strong>Mã hồ sơ:</strong> {row.ma_tp || 'Chưa có'}
+          </div>
+          <div>
+            <strong>Khách hàng:</strong> {row.ten_khach_hang || row.ma_khach_thue || 'Chưa có'}
+          </div>
+          <div>
+            <strong>Mã khách:</strong> {row.ma_khach_thue || 'Chưa có'}
+          </div>
+          <div>
+            <strong>Mã PĐC:</strong> {row.ma_pdc || 'Chưa có'}
+          </div>
+          <div>
+            <strong>Mã HĐT:</strong> {row.ma_hdt || 'Không có'}
+          </div>
+          <div>
+            <strong>Mã phòng:</strong> {row.ma_phong || 'Chưa có'}
+          </div>
+          <div>
+            <strong>Ngày trả phòng:</strong> {formatDate(row.ngay_tp) || 'Chưa có'}
+          </div>
+        </div>
+
+        <p style={S.confirmPreviewWarning}>
+          Sau khi xác nhận, hệ thống sẽ load dữ liệu chi tiết và chuyển giường liên quan sang trạng thái
+          {' '}<strong>Đang trả phòng</strong>.
+        </p>
+
+        <div style={S.confirmActions}>
+          <button type="button" style={S.btnSecondary} disabled={loading} onClick={onCancel}>
+            Hủy
+          </button>
+
+          <button type="button" style={S.btnPrimary} disabled={loading} onClick={onConfirm}>
+            {loading ? 'Đang tải...' : 'Xác nhận lập phiếu'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 
 function SuccessPopup({ data, onBackToList }) {
   return (
@@ -415,10 +470,17 @@ function DetailView({
         </div>
       </div>
 
-      <div style={S.footerBar}>
+      <div
+        style={{
+          ...S.footerBar,
+          justifyContent: isViewMode ? 'space-between' : 'flex-end',
+        }}
+      >
+        {isViewMode && (
         <button type="button" style={S.btnSecondary} disabled={saving} onClick={onBack}>
-          {isViewMode ? 'Quay lại danh sách' : 'Hủy bỏ'}
-        </button>
+          Quay lại danh sách
+          </button>
+        )}
 
         {isViewMode ? (
           <button type="button" style={S.btnPrimary} onClick={onPrint}>
@@ -426,7 +488,7 @@ function DetailView({
           </button>
         ) : (
           <button type="button" style={S.btnPrimary} disabled={saving} onClick={onOpenConfirm}>
-            Tạo & In Phiếu Thu
+          Tạo & In Phiếu Thu
           </button>
         )}
       </div>
@@ -456,6 +518,8 @@ export default function PhieuThuTraPhongPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [warning, setWarning] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [confirmPreviewRow, setConfirmPreviewRow] = useState(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
 
   const filteredPending = useMemo(() => {
     const keyword = normalizeText(search)
@@ -494,17 +558,29 @@ export default function PhieuThuTraPhongPage() {
     fetchData()
   }, [])
 
-  const handleCreateClick = async row => {
+  const handleCreateClick = row => {
+    setConfirmPreviewRow(row)
+  }
+
+  const handleConfirmPreview = async () => {
+    if (!confirmPreviewRow?.ma_tp) return
+
+    const row = confirmPreviewRow
+    setLoadingPreview(true)
+
     try {
       const response = await api.get(`/pt-tra-phong/preview/${row.ma_tp}`)
+
       setDetailData(response.data)
       setDetailMode('create')
       setShowConfirm(false)
+      setConfirmPreviewRow(null)
       setView('detail')
     } catch (error) {
       const data = error?.response?.data
 
       if (data?.code === 'LAST_RETURN_NEEDS_SERVICE') {
+        setConfirmPreviewRow(null)
         setWarning({
           message: data.message,
           data: data.data,
@@ -514,8 +590,11 @@ export default function PhieuThuTraPhongPage() {
 
       console.error(error)
       window.alert(getErrorMessage(error))
+    } finally {
+      setLoadingPreview(false)
     }
   }
+
   const handleDownloadPdf = async maPttp => {
     if (!maPttp) return false
 
@@ -559,7 +638,15 @@ export default function PhieuThuTraPhongPage() {
   setSaving(true)
 
   try {
-    const response = await api.post(`/pt-tra-phong/${detailData.ma_tp}`)
+    const serviceIds = Array.isArray(detailData?.dich_vu)
+      ? detailData.dich_vu
+          .map(item => item.ma_ct)
+          .filter(Boolean)
+      : []
+
+    const response = await api.post(`/pt-tra-phong/${detailData.ma_tp}`, {
+      service_ids: serviceIds,
+    })
     const createdData = response.data?.data || response.data || {}
     const maPttp = createdData.ma_pttp
 
@@ -713,6 +800,15 @@ export default function PhieuThuTraPhongPage() {
       <h2 style={S.historyTitle}>Danh sách PT Trả Phòng đã lập hôm nay</h2>
 
       <HistoryTable rows={historyRows} loading={loading} onView={handleViewReceipt} />
+
+      {confirmPreviewRow && (
+        <ConfirmPreviewPopup
+          row={confirmPreviewRow}
+          loading={loadingPreview}
+          onCancel={() => setConfirmPreviewRow(null)}
+          onConfirm={handleConfirmPreview}
+        />
+      )}
 
       {warning && (
         <LastReturnWarningPopup
@@ -1215,6 +1311,35 @@ const S = {
     backgroundColor: '#fff',
     boxShadow: '0 22px 70px rgba(0,0,0,0.24)',
     overflow: 'hidden',
+  },
+
+  confirmPreviewPopup: {
+    width: 'min(520px, calc(100vw - 32px))',
+    borderRadius: '10px',
+    backgroundColor: '#fff',
+    boxShadow: '0 22px 70px rgba(0,0,0,0.24)',
+    overflow: 'hidden',
+  },
+
+  confirmPreviewInfoBox: {
+    margin: '0 24px 14px',
+    padding: '14px 16px',
+    borderRadius: '8px',
+    backgroundColor: '#eef6ec',
+    color: '#405a34',
+    fontSize: '14px',
+    fontWeight: 700,
+    lineHeight: 1.7,
+  },
+
+  confirmPreviewWarning: {
+    margin: '0 24px 18px',
+    padding: '12px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#fff7e8',
+    color: '#8a5a00',
+    fontSize: '14px',
+    lineHeight: 1.55,
   },
 
   confirmTitle: {

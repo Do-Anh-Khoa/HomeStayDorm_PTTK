@@ -94,7 +94,7 @@ const getRoomRowsByReturn = async (client, maTp, maCn) => {
   return client.$queryRaw`
     SELECT
       dcg.ma_phong,
-      COUNT(*)::int AS so_giuong_hstp,
+      1::int AS so_giuong_hstp,
 
       COUNT(*) FILTER (
         WHERE g.trang_thai = ${RETURNING_BED_STATUS}
@@ -117,21 +117,30 @@ const getRoomRowsByReturn = async (client, maTp, maCn) => {
     WHERE h.ma_tp = ${maTp}
       AND h.ngay_huy IS NULL
       AND p.chi_nhanh = ${maCn}
-
+      AND h.ma_hdt IS NOT NULL
+      AND dcg.trang_thai = 'Đã chốt'
     GROUP BY dcg.ma_phong
     ORDER BY dcg.ma_phong ASC
   `
 }
 
-const isLastReturnOfAnyRoom = roomRows => {
+const isLastReturnOfAnyRoom = (roomRows, options = {}) => {
+  const { alreadyUpdatedCurrentBed = false } = options
+
   return roomRows.some(row => {
     const usingInRoom = toNumber(row.so_giuong_phong_dang_su_dung)
-    const returningCurrentReturn = toNumber(row.so_giuong_hstp_dang_tra_phong)
-    const currentReturnBeds = toNumber(row.so_giuong_hstp)
 
-    const effectiveUsingBeds = usingInRoom + returningCurrentReturn
+    // Trường hợp preview/create chạy lại sau khi preview đã cập nhật giường:
+    // giường của hồ sơ hiện tại đã chuyển từ Đang sử dụng sang Đang trả phòng.
+    // Nếu phòng còn 0 giường Đang sử dụng => hồ sơ này là người cuối.
+    if (alreadyUpdatedCurrentBed) {
+      return usingInRoom === 0
+    }
 
-    return effectiveUsingBeds > 0 && effectiveUsingBeds <= currentReturnBeds
+    // Trường hợp check trước khi cập nhật giường:
+    // nếu phòng còn đúng 1 giường Đang sử dụng,
+    // người đang trả phòng chính là người cuối.
+    return usingInRoom === 1
   })
 }
 
@@ -240,8 +249,13 @@ const getUnpaidServiceItemsByRooms = async (client, roomCodes) => {
 
   return rows.map(row => ({
     loai: 'DICH_VU',
+
+    // Cái này mới là ID cần nhớ để gán ma_pttp
     ma_ct: row.ma_ct,
+
+    // Cái này chỉ là mã loại dịch vụ
     ma_dv: row.ma_dv,
+
     ten: row.ten_dv,
     ma_phong: row.ma_phong,
     so_luong: toNumber(row.so_luong),
@@ -281,25 +295,68 @@ const getServiceItemsByReceipt = async (client, maPttp) => {
   }))
 }
 
-const updateBedsToReturning = async (client, maTp, maCn) => {
+const updateBedsToReturning = async (client, maTp, maCn, options = {}) => {
+  const { onlyRefundBeds = false } = options
+
+  // Case không có HĐT:
+  // hoàn cọc trước hợp đồng, cập nhật tất cả giường có trạng thái Hoàn cọc.
+  if (onlyRefundBeds) {
+    await client.$executeRaw`
+      UPDATE giuong g
+      SET trang_thai = ${RETURNING_BED_STATUS}
+      FROM ho_so_tra_phong h
+      JOIN dat_coc_giuong dcg ON dcg.ma_pdc = h.ma_pdc
+      JOIN phong p ON p.ma_phong = dcg.ma_phong
+      WHERE h.ma_tp = ${maTp}
+        AND h.ngay_huy IS NULL
+        AND h.ma_hdt IS NULL
+        AND p.chi_nhanh = ${maCn}
+        AND dcg.trang_thai = 'Hoàn cọc'
+        AND g.ma_phong = dcg.ma_phong
+        AND g.ma_giuong = dcg.ma_giuong
+        AND g.trang_thai IN ('Đang sử dụng', 'Đã đặt cọc')
+    `
+
+    return
+  }
+
+  // Case có HĐT:
+  // 1 HSTP = 1 khách thuê = chỉ cập nhật 1 giường.
   await client.$executeRaw`
+    WITH bed_to_update AS (
+      SELECT
+        g.ma_phong,
+        g.ma_giuong
+      FROM ho_so_tra_phong h
+      JOIN dat_coc_giuong dcg ON dcg.ma_pdc = h.ma_pdc
+      JOIN phong p ON p.ma_phong = dcg.ma_phong
+      JOIN giuong g
+        ON g.ma_phong = dcg.ma_phong
+       AND g.ma_giuong = dcg.ma_giuong
+      WHERE h.ma_tp = ${maTp}
+        AND h.ngay_huy IS NULL
+        AND h.ma_hdt IS NOT NULL
+        AND p.chi_nhanh = ${maCn}
+        AND dcg.trang_thai = 'Đã chốt'
+        AND g.trang_thai = 'Đang sử dụng'
+      ORDER BY g.ma_phong ASC, g.ma_giuong ASC
+      LIMIT 1
+    )
     UPDATE giuong g
     SET trang_thai = ${RETURNING_BED_STATUS}
-    FROM ho_so_tra_phong h
-    JOIN dat_coc_giuong dcg ON dcg.ma_pdc = h.ma_pdc
-    JOIN phong p ON p.ma_phong = dcg.ma_phong
-    WHERE h.ma_tp = ${maTp}
-      AND h.ngay_huy IS NULL
-      AND p.chi_nhanh = ${maCn}
-      AND g.ma_phong = dcg.ma_phong
-      AND g.ma_giuong = dcg.ma_giuong
-      AND g.trang_thai = 'Đang sử dụng'
+    FROM bed_to_update b
+    WHERE g.ma_phong = b.ma_phong
+      AND g.ma_giuong = b.ma_giuong
   `
 }
+
 const revertBedsAfterCancel = async (client, maTp, maCn) => {
   await client.$executeRaw`
     UPDATE giuong g
-    SET trang_thai = 'Đang sử dụng'
+    SET trang_thai = CASE
+      WHEN h.ma_hdt IS NULL THEN 'Đã đặt cọc'
+      ELSE 'Đang sử dụng'
+    END
     FROM ho_so_tra_phong h
     JOIN dat_coc_giuong dcg ON dcg.ma_pdc = h.ma_pdc
     JOIN phong p ON p.ma_phong = dcg.ma_phong
@@ -316,6 +373,7 @@ const revertBedsAfterCancel = async (client, maTp, maCn) => {
       )
   `
 }
+
 export const cancelPtTraPhongPreview = async (req, res, next) => {
   try {
     const maTp = req.params.ma_tp?.trim().toUpperCase()
@@ -358,13 +416,12 @@ export const cancelPtTraPhongPreview = async (req, res, next) => {
     next(error)
   }
 }
+
 const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => {
   const { updateBeds = false } = options
   const { nameSql, phoneSql } = await getCustomerColumnSql()
   const maCn = currentEmployee.ma_cn
 
-  // Bước 2: Lấy thông tin hồ sơ trả phòng, khách hàng,
-  // hợp đồng thuê, tổng tiền cọc PĐC và số người/giường trong PĐC.
   const headerRows = await client.$queryRaw`
     SELECT
       h.ma_tp,
@@ -372,7 +429,10 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
       h.ngay_huy,
       h.ma_pdc,
       h.ma_hdt,
-      h.ma_khach_thue,
+      CASE
+        WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+        ELSE h.ma_khach_thue
+      END AS ma_khach_thue,
       kh.email,
       kh.cccd,
       ${phoneSql} AS sdt,
@@ -391,7 +451,19 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
             AND p_count.chi_nhanh = ${maCn}
         ),
         0
-      ) AS so_nguoi_dat_coc,
+      ) AS so_giuong_dat_coc,
+
+      COALESCE(
+        (
+          SELECT COUNT(*)::int
+          FROM dat_coc_giuong dcg_refund
+          JOIN phong p_refund ON p_refund.ma_phong = dcg_refund.ma_phong
+          WHERE dcg_refund.ma_pdc = h.ma_pdc
+            AND p_refund.chi_nhanh = ${maCn}
+            AND dcg_refund.trang_thai = 'Hoàn cọc'
+        ),
+        0
+      ) AS so_giuong_hoan_coc,
 
       COALESCE(
         (
@@ -405,7 +477,12 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
       ) AS ma_phong
 
     FROM ho_so_tra_phong h
-    JOIN khach_hang kh ON kh.ma_kh = h.ma_khach_thue
+    JOIN phieu_dat_coc pdc ON pdc.ma_pdc = h.ma_pdc
+    JOIN khach_hang kh
+      ON kh.ma_kh = CASE
+        WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+        ELSE h.ma_khach_thue
+      END
     LEFT JOIN hop_dong_thue hdt ON hdt.ma_hdt = h.ma_hdt
     LEFT JOIN LATERAL (
       SELECT ptdc_inner.tong_tien
@@ -427,7 +504,6 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
     throw error
   }
 
-  // Bước 3: Kiểm tra hồ sơ đã được lập phiếu thu hay chưa.
   const existedRows = await client.$queryRaw`
     SELECT ma_pttp
     FROM pt_tra_phong
@@ -443,20 +519,31 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
 
   const header = headerRows[0]
 
-  // Bước 4: Kiểm tra đây có phải hồ sơ trả phòng cuối cùng của phòng.
+  const hasContract = Boolean(header.ma_hdt)
+
+  const tongTienCocPdc = toNumber(header.tong_tien_coc_pdc)
+  const soGiuongDatCoc = Math.max(1, toNumber(header.so_giuong_dat_coc))
+  const soGiuongHoanCoc = toNumber(header.so_giuong_hoan_coc)
+
+  if (!hasContract && soGiuongHoanCoc <= 0) {
+    const error = new Error('Hồ sơ không có hợp đồng cần có ít nhất một giường trạng thái Hoàn cọc trong đặt cọc giường.')
+    error.statusCode = 400
+    throw error
+  }
+
   const roomRows = await getRoomRowsByReturn(client, maTp, maCn)
   const roomCodes = roomRows.map(row => row.ma_phong)
 
-  const hasContract = Boolean(header.ma_hdt)
-  const lastReturn = hasContract ? isLastReturnOfAnyRoom(roomRows) : false
+  const lastReturn = hasContract
+  ? isLastReturnOfAnyRoom(roomRows, {
+      alreadyUpdatedCurrentBed: options.alreadyUpdatedCurrentBed === true,
+    })
+  : false
 
   let serviceItems = []
   let damageItems = []
 
-  // Chỉ có HĐT mới xét người cuối và dịch vụ tháng cuối
   if (hasContract && lastReturn) {
-    // Bước 5: Nếu là người cuối, lấy dịch vụ tháng cuối chưa thanh toán.
-    // Nếu chưa ghi nhận dịch vụ thì dừng quá trình lập phiếu.
     serviceItems = await getUnpaidServiceItemsByRooms(client, roomCodes)
 
     if (serviceItems.length === 0) {
@@ -471,27 +558,23 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
     }
   }
 
-  // Chỉ có HĐT mới tính vật dụng hư hại
   if (hasContract) {
-    // Bước 6: Lấy danh sách vật dụng hư hại để tính tiền khấu trừ.
     damageItems = await getDamageItems(client, maTp)
   }
 
   if (updateBeds) {
-    // Bước 7: Chuyển giường sang trạng thái "Đang trả phòng"
-    // để tránh người khác tiếp tục sử dụng giường trong lúc xử lý.
-    await updateBedsToReturning(client, maTp, maCn)
+    await updateBedsToReturning(client, maTp, maCn, {
+      onlyRefundBeds: !hasContract,
+    })
   }
 
-  // Bước 8: Xác định quy định hoàn cọc theo thời gian thuê.
   const refundRule = getReturnRule(header)
   const ruleInfo = await getRuleInfo(client, refundRule.ma_qdhc)
 
-  // Bước 9: Tính tiền cọc theo từng người trong cùng PĐC.
-  const tongTienCocPdc = toNumber(header.tong_tien_coc_pdc)
-  const soNguoiDatCoc = Math.max(1, toNumber(header.so_nguoi_dat_coc))
+  const soGiuongTinhHoan = hasContract ? 1 : soGiuongHoanCoc
 
-  const tienCocGoc = Math.round(tongTienCocPdc / soNguoiDatCoc)
+  const tienCocMoiGiuong = Math.round(tongTienCocPdc / soGiuongDatCoc)
+  const tienCocGoc = tienCocMoiGiuong * soGiuongTinhHoan
   const tienHoanCoc = Math.round(tienCocGoc * refundRule.ty_le)
 
   const tongHuHai = damageItems.reduce((sum, item) => sum + item.thanh_tien, 0)
@@ -514,7 +597,11 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
     sdt: header.sdt || '',
 
     tong_tien_coc_pdc: tongTienCocPdc,
-    so_nguoi_dat_coc: soNguoiDatCoc,
+    so_nguoi_dat_coc: soGiuongDatCoc,
+    so_giuong_dat_coc: soGiuongDatCoc,
+    so_giuong_hoan_coc: soGiuongHoanCoc,
+    so_giuong_tinh_hoan: soGiuongTinhHoan,
+    tien_coc_moi_giuong: tienCocMoiGiuong,
     tien_coc_goc: tienCocGoc,
 
     quy_dinh_hoan_coc: {
@@ -533,16 +620,17 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
 
 const insertPtTraPhong = async (client, data, currentEmployee, ghiChu) => {
   const columnRows = await client.$queryRaw`
-    SELECT column_name, is_nullable
+    SELECT column_name
     FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'pt_tra_phong'
   `
 
-  const nvCapNhatColumn = columnRows.find(row => row.column_name === 'nv_cap_nhat')
-  const mustInsertNvCapNhat = nvCapNhatColumn?.is_nullable === 'NO'
+  const hasNvCapNhatColumn = columnRows.some(row => row.column_name === 'nv_cap_nhat')
 
-  if (mustInsertNvCapNhat) {
+  // Nếu bảng có cột nv_cap_nhat thì vẫn insert cột này,
+  // nhưng để NULL vì lúc mới lập phiếu chưa có ai cập nhật.
+  if (hasNvCapNhatColumn) {
     return client.$queryRaw`
       INSERT INTO pt_tra_phong (
         ngay,
@@ -564,7 +652,7 @@ const insertPtTraPhong = async (client, data, currentEmployee, ghiChu) => {
         ${data.tien_khau_tru},
         ${currentEmployee.ma_nv},
         ${data.ma_tp},
-        ${currentEmployee.ma_nv}
+        NULL
       )
       RETURNING ma_pttp
     `
@@ -624,7 +712,12 @@ export const getPtTraPhongPageData = async (req, res, next) => {
       pendingWhere.push(Prisma.sql`
         (
           UPPER(h.ma_tp) LIKE ${`%${search.toUpperCase()}%`}
-          OR UPPER(h.ma_khach_thue) LIKE ${`%${search.toUpperCase()}%`}
+          OR UPPER(
+          CASE
+            WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+            ELSE h.ma_khach_thue
+          END
+          ) LIKE ${`%${search.toUpperCase()}%`}
           OR kh.cccd LIKE ${`%${search}%`}
           OR ${nameSql} ILIKE ${`%${search}%`}
         )
@@ -634,7 +727,10 @@ export const getPtTraPhongPageData = async (req, res, next) => {
     const pendingRows = await prisma.$queryRaw`
       SELECT
         h.ma_tp,
-        h.ma_khach_thue,
+        CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END AS ma_khach_thue,
         ${nameSql} AS ten_khach_hang,
         kh.cccd,
         ${phoneSql} AS sdt,
@@ -652,7 +748,12 @@ export const getPtTraPhongPageData = async (req, res, next) => {
           ''
         ) AS ma_phong
       FROM ho_so_tra_phong h
-      JOIN khach_hang kh ON kh.ma_kh = h.ma_khach_thue
+      JOIN phieu_dat_coc pdc ON pdc.ma_pdc = h.ma_pdc
+      JOIN khach_hang kh
+        ON kh.ma_kh = CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END
       WHERE ${Prisma.join(pendingWhere, ' AND ')}
       ORDER BY h.ngay_tp DESC, h.ma_tp DESC
     `
@@ -666,7 +767,10 @@ export const getPtTraPhongPageData = async (req, res, next) => {
         pttp.tien_hoan_coc,
         pttp.tien_khau_tru,
         pttp.trang_thai,
-        h.ma_khach_thue,
+        CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END AS ma_khach_thue,
         ${nameSql} AS ten_khach_hang,
         COALESCE(
           (
@@ -680,7 +784,12 @@ export const getPtTraPhongPageData = async (req, res, next) => {
         ) AS ma_phong
       FROM pt_tra_phong pttp
       JOIN ho_so_tra_phong h ON h.ma_tp = pttp.ma_tp
-      JOIN khach_hang kh ON kh.ma_kh = h.ma_khach_thue
+      JOIN phieu_dat_coc pdc ON pdc.ma_pdc = h.ma_pdc
+      JOIN khach_hang kh
+        ON kh.ma_kh = CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END
       WHERE DATE(pttp.ngay) = CURRENT_DATE
         AND pttp.nv_ke_toan = ${maNv}
       ORDER BY pttp.ngay DESC, pttp.ma_pttp DESC
@@ -752,7 +861,8 @@ export const createPtTraPhong = async (req, res, next) => {
 // để bảo đảm các cập nhật thành công hoặc thất bại cùng nhau.
     const result = await prisma.$transaction(async tx => {
       const data = await buildPreviewData(tx, maTp, currentEmployee, {
-        updateBeds: true,
+        updateBeds: false,
+        alreadyUpdatedCurrentBed: true,
       })
 
       const insertedRows = await insertPtTraPhong(
@@ -764,24 +874,55 @@ export const createPtTraPhong = async (req, res, next) => {
 
       const maPttp = insertedRows[0]?.ma_pttp
 
-      const serviceIds = data.dich_vu
-        .map(item => item.ma_ct)
-        .filter(Boolean)
+      const normalizeServiceId = value => {
+        const text = String(value || '').trim()
+      if (!text) return null
 
-// Bước 11: Gắn các dịch vụ tháng cuối vào phiếu thu vừa tạo.
-      if (serviceIds.length > 0) {
-        await tx.$executeRaw`
-          UPDATE chi_tiet_dv
-          SET ma_pttp = ${maPttp}
-          WHERE ma_ct IN (${Prisma.join(serviceIds)})
-        `
-      }
+      // Nếu ma_ct là số thì dùng number.
+      // Nếu ma_ct là dạng CT001 thì giữ string.
+      return /^\d+$/.test(text) ? Number(text) : text
+    }
 
-      return {
-        ...data,
-        ma_pttp: maPttp,
-      }
+      const serviceIdsFromBody = Array.isArray(req.body?.service_ids)
+        ? req.body.service_ids
+          .map(normalizeServiceId)
+          .filter(Boolean)
+        : []
+
+      const serviceIdsFromData = Array.isArray(data.dich_vu)
+        ? data.dich_vu
+          .map(item => normalizeServiceId(item.ma_ct))
+          .filter(Boolean)
+      : []
+
+      const serviceIds = serviceIdsFromBody.length > 0
+        ? serviceIdsFromBody
+        : serviceIdsFromData
+
+    console.log('DEBUG GAN MA_PTTP VAO CTDV:', {
+      maPttp,
+      serviceIdsFromBody,
+      serviceIdsFromData,
+      serviceIds,
+      la_ho_so_cuoi: data.la_ho_so_cuoi,
     })
+
+    if (serviceIds.length > 0) {
+      const updatedServices = await tx.$queryRaw`
+        UPDATE chi_tiet_dv
+        SET ma_pttp = ${maPttp}
+        WHERE ma_ct IN (${Prisma.join(serviceIds)})
+          AND ma_pttp IS NULL
+        RETURNING ma_ct, ma_dv, ma_phong, ma_pttp
+      `
+
+      console.log('DEBUG CTDV DA GAN PTTP:', updatedServices)
+      }
+          return {
+            ...data,
+            ma_pttp: maPttp,
+          }
+        })
 
     const resultData = {
       ...result,
@@ -859,7 +1000,10 @@ export const getPtTraPhongReceiptDetail = async (req, res, next) => {
         pttp.ma_tp,
         h.ma_pdc,
         h.ma_hdt,
-        h.ma_khach_thue,
+        CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END AS ma_khach_thue,
         h.ngay_tp,
         kh.cccd,
         kh.email,
@@ -877,7 +1021,12 @@ export const getPtTraPhongReceiptDetail = async (req, res, next) => {
         ) AS ma_phong
       FROM pt_tra_phong pttp
       JOIN ho_so_tra_phong h ON h.ma_tp = pttp.ma_tp
-      JOIN khach_hang kh ON kh.ma_kh = h.ma_khach_thue
+      JOIN phieu_dat_coc pdc ON pdc.ma_pdc = h.ma_pdc
+      JOIN khach_hang kh
+        ON kh.ma_kh = CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END
       WHERE pttp.ma_pttp = ${maPttp}
         AND ${buildSameBranchExistsSql(maCn)}
       LIMIT 1
@@ -890,8 +1039,15 @@ export const getPtTraPhongReceiptDetail = async (req, res, next) => {
     }
 
     const header = rows[0]
-    const damageItems = await getDamageItems(prisma, header.ma_tp)
-    const serviceItems = await getServiceItemsByReceipt(prisma, maPttp)
+    const hasContract = Boolean(header.ma_hdt)
+
+    const damageItems = hasContract
+      ? await getDamageItems(prisma, header.ma_tp)
+      : []
+
+    const serviceItems = hasContract
+      ? await getServiceItemsByReceipt(prisma, maPttp)
+      : []
 
     res.json({
       ma_pttp: header.ma_pttp,
@@ -951,7 +1107,10 @@ export const exportPtTraPhongPdf = async (req, res, next) => {
         pttp.ma_tp,
         h.ma_pdc,
         h.ma_hdt,
-        h.ma_khach_thue,
+        CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END AS ma_khach_thue,
         h.ngay_tp,
         kh.cccd,
         kh.email,
@@ -969,7 +1128,12 @@ export const exportPtTraPhongPdf = async (req, res, next) => {
         ) AS ma_phong
       FROM pt_tra_phong pttp
       JOIN ho_so_tra_phong h ON h.ma_tp = pttp.ma_tp
-      JOIN khach_hang kh ON kh.ma_kh = h.ma_khach_thue
+      JOIN phieu_dat_coc pdc ON pdc.ma_pdc = h.ma_pdc
+      JOIN khach_hang kh
+        ON kh.ma_kh = CASE
+          WHEN h.ma_hdt IS NULL THEN pdc.khach_dat
+          ELSE h.ma_khach_thue
+        END
       WHERE pttp.ma_pttp = ${maPttp}
         AND ${buildSameBranchExistsSql(maCn)}
       LIMIT 1
@@ -982,8 +1146,15 @@ export const exportPtTraPhongPdf = async (req, res, next) => {
     }
 
     const header = rows[0]
-    const damageItems = await getDamageItems(prisma, header.ma_tp)
-    const serviceItems = await getServiceItemsByReceipt(prisma, maPttp)
+    const hasContract = Boolean(header.ma_hdt)
+
+    const damageItems = hasContract
+      ? await getDamageItems(prisma, header.ma_tp)
+      : []
+
+    const serviceItems = hasContract
+      ? await getServiceItemsByReceipt(prisma, maPttp)
+      : []
 
     const data = {
       ma_pttp: header.ma_pttp,
