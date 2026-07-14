@@ -11,18 +11,20 @@ import {
   ghiNhanDichVu,
   getChoThanhToan,
   xacNhanThanhToan,
-} from '../controllers/dich-vu-phong.controller.js'
+} from '../controllers/chi-tiet-dv.controller.js'
 
 const router = Router()
 
 router.use(authMiddleware)
 
 router.get('/',        getDichVuList)
-router.get('/phong',   getDichVuPhongList)
 router.post('/',       createDichVu)
-router.post('/ghi-nhan', ghiNhanDichVu)
 router.put('/:ma',     updateDichVu)
 router.delete('/:ma',  deleteDichVu)
+
+// Backward compatibility endpoints
+router.get('/phong', getDichVuPhongList)
+router.post('/ghi-nhan', ghiNhanDichVu)
 router.get('/cho-thanh-toan', getChoThanhToan)
 router.post('/xac-nhan-thanh-toan', xacNhanThanhToan)
 

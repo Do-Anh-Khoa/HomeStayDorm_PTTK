@@ -40,7 +40,10 @@ export const menuByRole = {
   ],
   ketoan: [
     { label: 'Trang chủ', path: '/ke-toan', icon: LayoutDashboard },
-    { label: 'Lập phiếu thu', path: '/ke-toan/phieu-thu', icon: Receipt },
+    { label: 'Lập phiếu thu đặt cọc', path: '/ke-toan/phieu-thu-dat-coc', icon: Receipt },
+    { label: 'Lập phiếu thu hợp đồng', path: '/ke-toan/phieu-thu-hop-dong', icon: Receipt },
+    { label: 'Lập phiếu thu trả phòng', path: '/ke-toan/phieu-thu-tra-phong', icon: Receipt },
+    { label: 'Lập phiếu thu bồi thường', path: '/ke-toan/phieu-thu-boi-thuong', icon: Receipt },
     { label: 'Xử lý dịch vụ', path: '/ke-toan/dich-vu-hang-thang', icon: FileText },
   ],
   phutrach: [

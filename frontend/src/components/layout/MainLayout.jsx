@@ -38,7 +38,7 @@ export default function MainLayout({ role, setRole }) {
       />
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <Header role={role} />
-        <main className="app-main min-w-0 flex-1 overflow-x-hidden px-8 py-6">
+        <main className="app-main min-w-0 flex-1 overflow-x-hidden px-4 py-4 sm:px-6 sm:py-5 xl:px-8 xl:py-6">
           <Outlet />
         </main>
       </div>
