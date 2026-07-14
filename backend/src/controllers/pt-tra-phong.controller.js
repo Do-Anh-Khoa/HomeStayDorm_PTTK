@@ -362,8 +362,9 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
   const { updateBeds = false } = options
   const { nameSql, phoneSql } = await getCustomerColumnSql()
   const maCn = currentEmployee.ma_cn
-// Bước 2: Lấy thông tin hồ sơ trả phòng, khách hàng,
-// hợp đồng thuê và tiền cọc gốc.
+
+  // Bước 2: Lấy thông tin hồ sơ trả phòng, khách hàng,
+  // hợp đồng thuê, tổng tiền cọc PĐC và số người/giường trong PĐC.
   const headerRows = await client.$queryRaw`
     SELECT
       h.ma_tp,
@@ -378,7 +379,20 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
       ${nameSql} AS ten_khach_hang,
       hdt.tg_vao,
       hdt.thoi_han_thue,
-      ptdc.tong_tien AS tien_coc_goc,
+
+      ptdc.tong_tien AS tong_tien_coc_pdc,
+
+      COALESCE(
+        (
+          SELECT COUNT(*)::int
+          FROM dat_coc_giuong dcg_count
+          JOIN phong p_count ON p_count.ma_phong = dcg_count.ma_phong
+          WHERE dcg_count.ma_pdc = h.ma_pdc
+            AND p_count.chi_nhanh = ${maCn}
+        ),
+        0
+      ) AS so_nguoi_dat_coc,
+
       COALESCE(
         (
           SELECT STRING_AGG(DISTINCT dcg.ma_phong, ', ' ORDER BY dcg.ma_phong)
@@ -389,6 +403,7 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
         ),
         ''
       ) AS ma_phong
+
     FROM ho_so_tra_phong h
     JOIN khach_hang kh ON kh.ma_kh = h.ma_khach_thue
     LEFT JOIN hop_dong_thue hdt ON hdt.ma_hdt = h.ma_hdt
@@ -399,6 +414,7 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
       ORDER BY ptdc_inner.ngay DESC, ptdc_inner.ma_ptdc DESC
       LIMIT 1
     ) ptdc ON TRUE
+
     WHERE h.ma_tp = ${maTp}
       AND h.ngay_huy IS NULL
       AND ${buildSameBranchExistsSql(maCn)}
@@ -410,7 +426,8 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
     error.statusCode = 404
     throw error
   }
-// Bước 3: Kiểm tra hồ sơ đã được lập phiếu thu hay chưa.
+
+  // Bước 3: Kiểm tra hồ sơ đã được lập phiếu thu hay chưa.
   const existedRows = await client.$queryRaw`
     SELECT ma_pttp
     FROM pt_tra_phong
@@ -425,7 +442,8 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
   }
 
   const header = headerRows[0]
-// Bước 4: Kiểm tra đây có phải hồ sơ trả phòng cuối cùng của phòng.
+
+  // Bước 4: Kiểm tra đây có phải hồ sơ trả phòng cuối cùng của phòng.
   const roomRows = await getRoomRowsByReturn(client, maTp, maCn)
   const roomCodes = roomRows.map(row => row.ma_phong)
 
@@ -437,8 +455,8 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
 
   // Chỉ có HĐT mới xét người cuối và dịch vụ tháng cuối
   if (hasContract && lastReturn) {
-// Bước 5: Nếu là người cuối, lấy dịch vụ tháng cuối chưa thanh toán.
-// Nếu chưa ghi nhận dịch vụ thì dừng quá trình lập phiếu.
+    // Bước 5: Nếu là người cuối, lấy dịch vụ tháng cuối chưa thanh toán.
+    // Nếu chưa ghi nhận dịch vụ thì dừng quá trình lập phiếu.
     serviceItems = await getUnpaidServiceItemsByRooms(client, roomCodes)
 
     if (serviceItems.length === 0) {
@@ -455,20 +473,25 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
 
   // Chỉ có HĐT mới tính vật dụng hư hại
   if (hasContract) {
-  // Bước 6: Lấy danh sách vật dụng hư hại để tính tiền khấu trừ.
+    // Bước 6: Lấy danh sách vật dụng hư hại để tính tiền khấu trừ.
     damageItems = await getDamageItems(client, maTp)
   }
 
   if (updateBeds) {
-  // Bước 7: Chuyển giường sang trạng thái "Đang trả phòng"
-// để tránh người khác tiếp tục sử dụng giường trong lúc xử l
+    // Bước 7: Chuyển giường sang trạng thái "Đang trả phòng"
+    // để tránh người khác tiếp tục sử dụng giường trong lúc xử lý.
     await updateBedsToReturning(client, maTp, maCn)
   }
-// Bước 8: Xác định quy định hoàn cọc theo thời gian thuê.
+
+  // Bước 8: Xác định quy định hoàn cọc theo thời gian thuê.
   const refundRule = getReturnRule(header)
   const ruleInfo = await getRuleInfo(client, refundRule.ma_qdhc)
-// Bước 9: Tính tiền hoàn cọc, tiền khấu trừ và tổng quyết toán.
-  const tienCocGoc = toNumber(header.tien_coc_goc)
+
+  // Bước 9: Tính tiền cọc theo từng người trong cùng PĐC.
+  const tongTienCocPdc = toNumber(header.tong_tien_coc_pdc)
+  const soNguoiDatCoc = Math.max(1, toNumber(header.so_nguoi_dat_coc))
+
+  const tienCocGoc = Math.round(tongTienCocPdc / soNguoiDatCoc)
   const tienHoanCoc = Math.round(tienCocGoc * refundRule.ty_le)
 
   const tongHuHai = damageItems.reduce((sum, item) => sum + item.thanh_tien, 0)
@@ -490,7 +513,10 @@ const buildPreviewData = async (client, maTp, currentEmployee, options = {}) => 
     cccd: header.cccd || '',
     sdt: header.sdt || '',
 
+    tong_tien_coc_pdc: tongTienCocPdc,
+    so_nguoi_dat_coc: soNguoiDatCoc,
     tien_coc_goc: tienCocGoc,
+
     quy_dinh_hoan_coc: {
       ...ruleInfo,
       ty_le: refundRule.ty_le,
