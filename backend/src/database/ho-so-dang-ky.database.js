@@ -7,6 +7,17 @@ function createHttpError(message, status = 400) {
   return error
 }
 
+function isFutureDate(value) {
+  const parsed = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) {
+    return false
+  }
+
+  const today = new Date()
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  return parsed > todayStart
+}
+
 function mapProfileRow(row) {
   if (!row) {
     return null
@@ -102,23 +113,100 @@ function buildListWhereSql({ keyword = '', normalizedStatus = '' } = {}) {
 }
 
 export async function getHoSoDangKyFormSnapshot({ maCn = '' } = {}) {
-  const branches = await prisma.chi_nhanh.findMany({
-    select: {
-      ma_cn: true,
-      ten_cn: true,
-    },
-    orderBy: {
-      ma_cn: 'asc',
-    },
-  })
+  const [branches, criteriaRows, capacityRows] = await Promise.all([
+    prisma.chi_nhanh.findMany({
+      select: {
+        ma_cn: true,
+        ten_cn: true,
+      },
+      orderBy: {
+        ma_cn: 'asc',
+      },
+    }),
+    prisma.$queryRaw`
+      SELECT
+        p.chi_nhanh AS "ma_cn",
+        BTRIM(tc.ten_tc) AS "ten_tc"
+      FROM tieu_chi tc
+      JOIN phong p ON p.ma_phong = tc.ma_phong
+      WHERE tc.ten_tc IS NOT NULL
+        AND BTRIM(tc.ten_tc) <> ''
+      GROUP BY p.chi_nhanh, BTRIM(tc.ten_tc)
+      ORDER BY p.chi_nhanh ASC, BTRIM(tc.ten_tc) ASC
+    `,
+    prisma.$queryRaw`
+      SELECT
+        chi_nhanh AS "ma_cn",
+        suc_chua_toi_da AS "suc_chua"
+      FROM phong
+      WHERE suc_chua_toi_da IS NOT NULL
+        AND suc_chua_toi_da > 0
+      GROUP BY chi_nhanh, suc_chua_toi_da
+      ORDER BY chi_nhanh ASC, suc_chua_toi_da ASC
+    `,
+  ])
 
   const defaultBranchCode = branches.some((branch) => branch.ma_cn === maCn)
     ? maCn
     : branches[0]?.ma_cn || ''
 
+  const criteriaByBranch = criteriaRows.reduce((accumulator, row) => {
+    const branchCode = row.ma_cn
+    if (!accumulator[branchCode]) {
+      accumulator[branchCode] = []
+    }
+
+    accumulator[branchCode].push({
+      value: row.ten_tc,
+      label: row.ten_tc,
+    })
+
+    return accumulator
+  }, {})
+
+  const capacityByBranch = capacityRows.reduce((accumulator, row) => {
+    const branchCode = row.ma_cn
+    if (!accumulator[branchCode]) {
+      accumulator[branchCode] = []
+    }
+
+    accumulator[branchCode].push(Number(row.suc_chua || 0))
+    return accumulator
+  }, {})
+
   return {
     branches,
     defaultBranchCode,
+    criteriaByBranch,
+    capacityByBranch,
+  }
+}
+
+async function validateNguyenPhongCapacity(db, { chiNhanh, hinhThucThue, soNguoi }) {
+  if (hinhThucThue !== 'Nguyên phòng') {
+    return
+  }
+
+  const capacityRows = await db.$queryRaw`
+    SELECT DISTINCT suc_chua_toi_da AS "suc_chua"
+    FROM phong
+    WHERE chi_nhanh = ${chiNhanh}
+      AND suc_chua_toi_da IS NOT NULL
+      AND suc_chua_toi_da > 0
+    ORDER BY suc_chua_toi_da ASC
+  `
+
+  const capacities = capacityRows.map((row) => Number(row.suc_chua || 0)).filter(Boolean)
+
+  if (capacities.length === 0) {
+    throw createHttpError('Chi nhánh này chưa có phòng để đăng ký theo hình thức nguyên phòng.', 400)
+  }
+
+  if (!capacities.includes(Number(soNguoi))) {
+    throw createHttpError(
+      `Thuê nguyên phòng phải chọn số lượng người đúng với sức chứa phòng hiện có (${capacities.join(', ')} người).`,
+      400,
+    )
   }
 }
 
@@ -133,6 +221,12 @@ export async function createHoSoDangKyRecord(input) {
   }
 
   return prisma.$transaction(async (tx) => {
+    await validateNguyenPhongCapacity(tx, {
+      chiNhanh: input.profile.chi_nhanh,
+      hinhThucThue: input.profile.hinh_thuc_thue,
+      soNguoi: input.profile.so_nguoi,
+    })
+
     const existingByCccd = await tx.khach_hang.findUnique({
       where: { cccd: input.customer.cccd },
     })
@@ -282,6 +376,18 @@ export async function getHoSoDangKyDetailSnapshot(maDk) {
 export const updateHoSoDangKyRecord = async (maDk, data) => {
   
   return await prisma.$transaction(async (tx) => {
+    const normalizedSoNguoi = parseInt(data.soLuongNguoi, 10)
+    const normalizedThoiHanThue = parseInt(data.thoiHanThue, 10)
+
+    if (!isFutureDate(data.thoiGianVao)) {
+      throw createHttpError('Thời gian dự kiến vào ở phải là ngày trong tương lai.', 400)
+    }
+
+    await validateNguyenPhongCapacity(tx, {
+      chiNhanh: data.chiNhanh,
+      hinhThucThue: data.hinhThucThue,
+      soNguoi: normalizedSoNguoi,
+    })
 
     await tx.khach_hang.update({
       where: { ma_kh: data.maKhachHang },
@@ -301,9 +407,9 @@ export const updateHoSoDangKyRecord = async (maDk, data) => {
       where: { ma_dk: maDk },
       data: {
         hinh_thuc_thue: data.hinhThucThue,
-        so_nguoi: parseInt(data.soLuongNguoi, 10), // <--- SỬA CHỖ NÀY
+        so_nguoi: normalizedSoNguoi,
         thoi_gian_vao: new Date(data.thoiGianVao),
-        thoi_han_thue: parseInt(data.thoiHanThue, 10), // <--- SỬA CHỖ NÀY
+        thoi_han_thue: normalizedThoiHanThue,
         tieu_chi: data.tieuChi,
         chi_nhanh: data.chiNhanh,
       },
