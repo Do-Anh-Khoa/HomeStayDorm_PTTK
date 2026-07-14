@@ -26,6 +26,8 @@ import PhieuDatCocPage from '../pages/sale/PhieuDatCocPage.jsx'
 
 import DashboardQuanLy from '../pages/quanly/DashboardQuanLy.jsx'
 import BanGiaoPage from '../pages/quanly/BanGiaoPage.jsx'
+import ChiTietHoSoTraPhongPage from '../pages/quanly/ChiTietHoSoTraPhongPage.jsx'
+import LapHoSoTraPhongPage from '../pages/quanly/LapHoSoTraPhongPage.jsx'
 import TraCuuPhongGiuongQuanLyPage from '../pages/quanly/TraCuuPhongGiuongPage.jsx'
 import TraPhongPage from '../pages/quanly/TraPhongPage.jsx'
 import VatDungHuHaiPage from '../pages/quanly/VatDungHuHaiPage.jsx'
@@ -154,6 +156,8 @@ export default function AppRoutes() {
         <Route path="/sale/phieu-thu" element={<PhieuThuSalePage />} />
         <Route path="/sale/phieu-dat-coc" element={<PhieuDatCocPage />} />
         <Route path="/sale/tra-phong" element={<TraPhongPage />} />
+        <Route path="/sale/tra-phong/lap-ho-so" element={<LapHoSoTraPhongPage />} />
+        <Route path="/sale/tra-phong/:profileId" element={<ChiTietHoSoTraPhongPage />} />
       </Route>
 
       {/* QUẢN LÝ */}
@@ -168,6 +172,8 @@ export default function AppRoutes() {
         <Route path="/quan-ly/tra-cuu-phong-giuong" element={<TraCuuPhongGiuongQuanLyPage />} />
         <Route path="/quan-ly/ban-giao" element={<BanGiaoPage />} />
         <Route path="/quan-ly/tra-phong" element={<TraPhongPage />} />
+        <Route path="/quan-ly/tra-phong/lap-ho-so" element={<LapHoSoTraPhongPage />} />
+        <Route path="/quan-ly/tra-phong/:profileId" element={<ChiTietHoSoTraPhongPage />} />
         <Route path="/quan-ly/vat-dung-hu-hai" element={<VatDungHuHaiPage />} />
         <Route path="/quan-ly/kiem-tra-phieu-thu" element={<KiemTraPhieuThuPage />} />
         <Route path="/quan-ly/cap-nhat-phieu-thu" element={<CapNhatPhieuThuPage />} />
