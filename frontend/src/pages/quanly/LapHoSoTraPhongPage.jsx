@@ -117,6 +117,9 @@ export default function LapHoSoTraPhongPage() {
 
   if (viewMode === 'detail' && selectedRecord) {
     const hasContract = Boolean(selectedRecord.maHopDong)
+    const currentRentCode = selectedRecord.maHopDong || selectedRecord.maPdc
+    const startDateDisplay = hasContract ? formatDate(selectedRecord.ngayVao) : 'Chưa vào ở'
+    const rentStatusDisplay = hasContract ? (selectedRecord.trangThaiHopDong || 'Đang hiệu lực') : 'Chỉ có phiếu đặt cọc'
 
     return (
       <section className="pb-8">
@@ -163,10 +166,10 @@ export default function LapHoSoTraPhongPage() {
                 </div>
 
                 <div className="grid gap-5 rounded-[12px] border border-[#d9ddd2] bg-[#fcfcfa] px-5 py-5 md:grid-cols-4">
-                  <DetailField label={hasContract ? 'Mã hợp đồng' : 'Mã PDC'} value={selectedRecord.maHopDong || selectedRecord.maPdc} />
+                  <DetailField label={hasContract ? 'Mã hợp đồng' : 'Mã PDC'} value={currentRentCode} />
                   <DetailField label="Phòng/Giường" value={String(selectedRecord.phongGiuong || '').replace('/', '-')} />
-                  <DetailField label="Ngày bắt đầu" value={formatDate(selectedRecord.ngayVao)} />
-                  <DetailField label="Trạng thái" value={selectedRecord.trangThaiHopDong || 'Đang hiệu lực'} />
+                  <DetailField label="Ngày bắt đầu" value={startDateDisplay} />
+                  <DetailField label="Trạng thái" value={rentStatusDisplay} />
                 </div>
               </section>
 
@@ -183,7 +186,7 @@ export default function LapHoSoTraPhongPage() {
                     <span className="text-[14px] font-semibold text-[#656b61]">Hồ sơ được chọn</span>
                     <input
                       type="text"
-                      value={selectedRecord.maHopDong || selectedRecord.maPdc}
+                      value={currentRentCode}
                       disabled
                       className="h-[48px] w-full rounded-[10px] border border-[#d7dbd1] bg-[#f6f7f3] px-4 text-[15px] font-semibold text-[#555b50]"
                     />
@@ -287,7 +290,7 @@ export default function LapHoSoTraPhongPage() {
                         handleSearch()
                       }
                     }}
-                    placeholder="Nhập mã phòng/CCCD/ và hồ sơ thuê của khách"
+                    placeholder="Nhập mã phòng, CCCD, mã PDC hoặc mã hợp đồng"
                     className="h-[48px] w-full rounded-[10px] border border-[#d7dbd1] bg-white pl-11 pr-4 text-[15px] text-[#31372b] outline-none transition placeholder:text-[#a1a69d] focus:border-[#9ead89]"
                   />
                 </label>
@@ -338,7 +341,7 @@ export default function LapHoSoTraPhongPage() {
                           <td className="px-4 py-5">{row.hoVaTen}</td>
                           <td className="px-4 py-5">{row.soDienThoai}</td>
                           <td className="px-4 py-5">{row.phongGiuong}</td>
-                          <td className="px-4 py-5">{formatDate(row.ngayVao)}</td>
+                          <td className="px-4 py-5">{row.ngayVao ? formatDate(row.ngayVao) : 'Chưa vào ở'}</td>
                         </tr>
                       )})}
                     </tbody>
@@ -399,7 +402,7 @@ export default function LapHoSoTraPhongPage() {
                     {isSearching ? 'Đang tìm kiếm...' : 'Chưa có thông tin khách thuê'}
                   </h3>
                   <p className="mt-3 text-[16px] leading-[1.7] text-[#6d7268]">
-                    Nhập mã phòng hoặc CCCD để tra cứu hợp đồng thuê hoặc phiếu đặt cọc còn hiệu lực.
+                    Nhập mã phòng, CCCD, mã PDC hoặc mã hợp đồng để tra cứu hồ sơ thuê còn hiệu lực.
                   </p>
                 </div>
               </div>

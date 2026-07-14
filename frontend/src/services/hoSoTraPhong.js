@@ -22,6 +22,16 @@ export async function fetchReturnProfileDetail(maTP) {
   return data?.data || null
 }
 
+export async function openReturnProfilePdf(maTP) {
+  const response = await api.get(`/ho-so-tra-phong/${maTP}/pdf`, {
+    responseType: 'blob',
+  })
+
+  const blob = new Blob([response.data], { type: 'application/pdf' })
+  const fileUrl = window.URL.createObjectURL(blob)
+  window.open(fileUrl, '_blank')
+}
+
 export async function cancelReturnProfile(maTP) {
   const { data } = await api.post(`/ho-so-tra-phong/${maTP}/huy`)
   return data?.data || false

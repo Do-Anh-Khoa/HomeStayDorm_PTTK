@@ -4,23 +4,29 @@ function pad2(value) {
   return String(value).padStart(2, '0')
 }
 
+function pad3(value) {
+  return String(value).padStart(3, '0')
+}
+
+const stamp = new Date()
+const stampToken = `${String(stamp.getFullYear()).slice(-2)}${pad2(stamp.getHours())}${pad2(stamp.getMinutes())}`
+
 function makeCccd(index) {
-  const now = new Date()
-  const y = String(now.getFullYear()).slice(-2)
-  return `0799${y}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}${pad2(index)}`
+  return `079${stampToken}${pad3(index)}`
 }
 
 function makeEmail(index) {
-  const tag = String(index).padStart(2, '0')
-  return `nguyenatuan143+pdconly${tag}@gmail.com`
+  const tag = pad3(index)
+  return `nguyenatuan143+pdconly${stampToken}${tag}@gmail.com`
 }
 
 function makePhone(index) {
-  const suffix = String(1000 + index).slice(-4)
-  return `09${suffix}0000`
+  const suffix = String(100000 + index).slice(-6)
+  return `0${suffix}000`
 }
 
 const COUNT = Number(process.env.SEED_COUNT || 6)
+const TARGET_BRANCH = String(process.env.SEED_BRANCH || 'CN001').trim()
 
 const beds = await prisma.$queryRaw`
   SELECT
@@ -30,12 +36,13 @@ const beds = await prisma.$queryRaw`
   FROM giuong g
   JOIN phong p ON p.ma_phong = g.ma_phong
   WHERE g.trang_thai = 'Trống'
+    AND (${TARGET_BRANCH} = '' OR p.chi_nhanh = ${TARGET_BRANCH})
   ORDER BY p.chi_nhanh ASC, g.ma_phong ASC, g.ma_giuong ASC
   LIMIT ${COUNT};
 `
 
 if (!beds.length) {
-  console.log('Không tìm thấy giường trạng thái Trống để seed.')
+  console.log(`Không tìm thấy giường trạng thái Trống để seed ở chi nhánh ${TARGET_BRANCH || 'bất kỳ'}.`)
   await prisma.$disconnect()
   process.exit(0)
 }
@@ -106,6 +113,7 @@ for (let i = 0; i < beds.length; i += 1) {
 
 console.log('Seed PDC-only (còn hiệu lực, chưa phát sinh hợp đồng) xong:')
 console.table(created)
+console.log(`Keyword gợi ý để test: email alias pdconly${stampToken}..., CCCD bắt đầu bằng 079${stampToken}, chi nhánh ${TARGET_BRANCH}`)
 
 await prisma.$disconnect()
 

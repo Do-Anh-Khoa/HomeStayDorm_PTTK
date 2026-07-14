@@ -7,6 +7,7 @@ import {
   searchKhachTraPhong,
 } from '../database/ho-so-tra-phong.database.js'
 import { guiEmailLichHenTraPhong } from '../utils/guiMailLichHenTraPhong.js'
+import { inHoSoTraPhong } from '../utils/inHoSoTraPhong.js'
 
 async function getCurrentEmployee(req) {
   const maNV = req.auth?.ma_nv
@@ -113,6 +114,20 @@ export async function xemChiTietHoSoTraPhong(req, res, next) {
     const detail = await getChiTietHoSoTraPhong({ maTP, maCn: employee.ma_cn })
 
     res.json({ data: detail })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function inHoSoTraPhongPDF(req, res, next) {
+  try {
+    const employee = await getCurrentEmployee(req)
+    const maTP = String(req.params.maTP || req.params.ma_tp || '').trim()
+
+    const detail = await getChiTietHoSoTraPhong({ maTP, maCn: employee.ma_cn })
+    const filePath = await inHoSoTraPhong(detail)
+
+    return res.download(filePath, `${detail.maHoSo || maTP}.pdf`)
   } catch (error) {
     next(error)
   }
