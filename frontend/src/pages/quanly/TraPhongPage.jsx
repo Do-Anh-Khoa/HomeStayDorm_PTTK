@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Filter, Plus, Search } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import PageTitle from '../../components/common/PageTitle.jsx'
 
 const PAGE_SIZE = 3
-
-const STATUS_OPTIONS = ['Tất cả trạng thái', 'Chờ quyết toán', 'Đã hẹn', 'Hoàn tất']
 
 const RETURN_PROFILE_ROWS = [
   {
@@ -63,12 +62,6 @@ const RETURN_PROFILE_ROWS = [
   },
 ]
 
-const STATUS_STYLES = {
-  'Chờ quyết toán': 'bg-[#e1e8fb] text-[#6f7fa9]',
-  'Đã hẹn': 'bg-[#dfe9c7] text-[#6d8445]',
-  'Hoàn tất': 'bg-[#eceadf] text-[#8a856e]',
-}
-
 function formatDate(value) {
   if (!value) {
     return ''
@@ -86,24 +79,14 @@ function normalizeText(value) {
   return String(value || '').trim().toLowerCase()
 }
 
-function StatusBadge({ status }) {
-  return (
-    <span
-      className={`inline-flex min-h-[34px] min-w-[110px] items-center justify-center rounded-full px-4 py-2 text-[13px] font-semibold ${STATUS_STYLES[status] || 'bg-[#ecece8] text-[#62665d]'}`}
-    >
-      {status}
-    </span>
-  )
-}
-
 export default function TraPhongPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState(STATUS_OPTIONS[0])
   const [dateFilter, setDateFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [appliedFilters, setAppliedFilters] = useState({
     search: '',
-    status: STATUS_OPTIONS[0],
     date: '',
   })
 
@@ -116,12 +99,9 @@ export default function TraPhongPage() {
           normalizeText(value).includes(query),
         )
 
-      const matchesStatus =
-        appliedFilters.status === STATUS_OPTIONS[0] || row.status === appliedFilters.status
-
       const matchesDate = !appliedFilters.date || row.returnDate === appliedFilters.date
 
-      return matchesSearch && matchesStatus && matchesDate
+      return matchesSearch && matchesDate
     })
   }, [appliedFilters])
 
@@ -143,11 +123,17 @@ export default function TraPhongPage() {
   const handleApplyFilters = () => {
     setAppliedFilters({
       search,
-      status: statusFilter,
       date: dateFilter,
     })
     setCurrentPage(1)
   }
+
+  const createProfilePath = location.pathname.startsWith('/sale')
+    ? '/sale/tra-phong/lap-ho-so'
+    : '/quan-ly/tra-phong/lap-ho-so'
+  const detailBasePath = location.pathname.startsWith('/sale')
+    ? '/sale/tra-phong'
+    : '/quan-ly/tra-phong'
 
   return (
     <section className="space-y-8 pb-8">
@@ -159,6 +145,7 @@ export default function TraPhongPage() {
 
         <button
           type="button"
+          onClick={() => navigate(createProfilePath)}
           className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[8px] bg-[#4b6132] px-6 text-[16px] font-semibold text-white shadow-[0_6px_12px_rgba(75,97,50,0.16)] transition hover:bg-[#42572c]"
         >
           <Plus size={18} />
@@ -182,20 +169,6 @@ export default function TraPhongPage() {
                 className="h-[46px] w-full rounded-[8px] border border-[#d7dbd1] bg-white pl-11 pr-4 text-[15px] text-[#31372b] outline-none transition placeholder:text-[#a1a69d] focus:border-[#9ead89]"
               />
             </label>
-
-            <div className="xl:flex-[0.9]">
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="h-[46px] w-full rounded-[8px] border border-[#d7dbd1] bg-white px-4 text-[15px] text-[#43493b] outline-none transition focus:border-[#9ead89]"
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div className="xl:flex-[0.75]">
               <input
@@ -225,9 +198,7 @@ export default function TraPhongPage() {
                 <th className="px-4 py-4">Khách thuê</th>
                 <th className="px-4 py-4">CCCD/SĐT</th>
                 <th className="px-4 py-4">Phòng/Giường</th>
-                <th className="px-4 py-4">Loại hồ sơ</th>
                 <th className="px-4 py-4">Ngày trả phòng</th>
-                <th className="px-4 py-4">Trạng thái</th>
                 <th className="px-5 py-4 text-center">Thao tác</th>
               </tr>
             </thead>
@@ -235,7 +206,7 @@ export default function TraPhongPage() {
             <tbody>
               {paginatedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-14 text-center text-[16px] text-[#74796f]">
+                  <td colSpan={6} className="px-5 py-14 text-center text-[16px] text-[#74796f]">
                     Không có hồ sơ trả phòng phù hợp với bộ lọc hiện tại.
                   </td>
                 </tr>
@@ -255,18 +226,11 @@ export default function TraPhongPage() {
                     </td>
                     <td className="px-4 py-5 text-[#5f645b]">{row.idCardOrPhone}</td>
                     <td className="px-4 py-5 text-[#575c50]">{row.roomBed}</td>
-                    <td className="px-4 py-5">
-                      <span className="block max-w-[150px] break-words leading-[1.45] text-[#40453d]">
-                        {row.profileType}
-                      </span>
-                    </td>
                     <td className="px-4 py-5 text-[#5b6056]">{formatDate(row.returnDate)}</td>
-                    <td className="px-4 py-5">
-                      <StatusBadge status={row.status} />
-                    </td>
                     <td className="px-5 py-5 text-center">
                       <button
                         type="button"
+                        onClick={() => navigate(`${detailBasePath}/${row.id}`)}
                         className="text-[15px] font-semibold text-[#5c614e] transition hover:text-[#465c2d]"
                       >
                         Chi tiết
