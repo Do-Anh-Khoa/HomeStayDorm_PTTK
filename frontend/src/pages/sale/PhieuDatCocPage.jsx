@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageTitle from '../../components/common/PageTitle.jsx'
 import api from '../../services/api.js'
-
+import { BriefcaseBusiness, Home, UserRound, ChevronLeft, ChevronRight, Search, Printer, ArrowLeft, CircleCheck } from 'lucide-react'
 const ROOM_IMAGE =
   'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=900&q=80'
 
@@ -25,6 +25,28 @@ const HO_SO_BADGE = {
   'Đã chốt cọc': { bg: '#e3f0e1', color: '#2e7d32' },
   'Hủy yêu cầu': { bg: '#fbe4e1', color: '#c0392b' },
 }
+
+const PDC_BADGE = {
+  'Chờ thanh toán': { bg: '#fef3c7', color: '#b45309' },
+  'Quá hạn': { bg: '#fee2e2', color: '#b91c1c' },
+  'Hoàn tất': { bg: '#dcfce7', color: '#15803d' },
+  'Đã hủy': { bg: '#f1f5f9', color: '#475569' },
+  'Chờ duyệt': { bg: '#3b4f27', color: '#ffffff' }, 
+}
+
+const PT_BADGE = {
+  'Chưa thanh toán': { bg: '#fee2e2', color: '#b91c1c' },
+  'Đã thanh toán': { bg: '#dcfce7', color: '#15803d' },
+}
+
+
+
+const IconEye = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+const IconArrowLeft = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+const IconPrinter = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+const IconExternalLink = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+
+
 
 const BED_BADGE = {
   Trống: { bg: '#e2f8e5', color: '#56c76a' },
@@ -84,7 +106,377 @@ function StepIndicator({ step }) {
     </div>
   )
 }
+// ==========================================
+// COMPONENT: VIEW DANH SÁCH PHIẾU ĐẶT CỌC (ĐÃ PHÂN TRANG)
+// ==========================================
+function PhieuDatCocListView({ onSelectPDC }) {
+  const [search, setSearch] = useState('')
+  const [pdcList, setPdcList] = useState([])
+  const [loading, setLoading] = useState(false)
+  
+  // State phân trang
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 4 
 
+  const fetchDanhSachPDC = async () => {
+    setLoading(true)
+    try {
+      const { data } = await api.get('/phieu-dat-coc', { params: { search } })
+      setPdcList(data?.items || [])
+      setCurrentPage(1) // Reset về trang 1 khi tìm kiếm
+    } catch (error) {
+      setPdcList([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchDanhSachPDC() }, [])
+
+  // Tính toán dữ liệu hiển thị cho trang hiện tại
+  const totalItems = pdcList.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const endIndex = Math.min(currentPage * pageSize, totalItems)
+  const currentData = pdcList.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-[#d9ddd2] bg-white shadow-[0_8px_24px_rgba(33,41,21,0.04)] mt-5">
+      <div className="border-b border-[#e2e5dd] px-6 py-6 sm:px-8">
+        <div className="flex w-full xl:max-w-[420px]">
+          <label className="relative block w-full">
+            <Search size={22} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8f938b]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && fetchDanhSachPDC()}
+              placeholder="Tìm theo Mã phiếu, Khách hàng, CCCD..."
+              className="h-[54px] w-full rounded-[8px] border border-[#d7dbd1] bg-white pl-13 pr-4 text-[16px] text-[#31372b] outline-none transition placeholder:text-[#a1a69d] focus:border-[#9ead89]"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-[960px] w-full border-collapse">
+          <thead>
+            <tr className="bg-[#f8f8f6] text-left text-[14px] font-bold text-[#616659] uppercase tracking-wider">
+              <th className="px-8 py-5">Mã phiếu</th>
+              <th className="px-5 py-5">Khách hàng</th>
+              <th className="px-5 py-5">CCCD/SĐT</th>
+              <th className="px-5 py-5">Phòng/Giường</th>
+              <th className="px-5 py-5">Ngày lập</th>
+              <th className="px-5 py-5 text-right">Số tiền cọc</th>
+              <th className="px-5 py-5">Hạn thanh toán</th>
+              <th className="px-5 py-5">Trạng thái</th>
+              <th className="px-8 py-5 text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan="9" className="px-8 py-14 text-center text-[16px] text-[#74796f]">Đang tải dữ liệu từ hệ thống...</td></tr>
+            ) : currentData.length === 0 ? (
+              <tr><td colSpan="9" className="px-8 py-14 text-center text-[16px] text-[#74796f]">Không tìm thấy phiếu đặt cọc nào.</td></tr>
+            ) : (
+              currentData.map((item) => (
+                <tr key={item.maPDC} className="border-t border-[#e7e9e2] text-[15px] font-medium text-[#444a3f]">
+                  <td className="px-8 py-5 font-bold text-[#2d3725]">{item.maPDC}</td>
+                  <td className="px-5 py-5 text-[#343a2f] font-semibold">{item.tenKH}</td>
+                  <td className="px-5 py-5 text-[#5f645b]">{item.cccd}</td>
+                  <td className="px-5 py-5">{item.phong} - {item.giuong}</td>
+                  <td className="px-5 py-5 text-[#5b6056]">{item.ngayLap}</td>
+                  <td className="px-5 py-5 text-right font-bold text-[#1f2937]">{money(item.soTien)}</td>
+                  <td className="px-5 py-5 text-[#5b6056]">{item.hanTT}</td>
+                  <td className="px-5 py-5"><Badge label={item.trangThai} map={PDC_BADGE} /></td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center justify-center">
+                      <button onClick={() => onSelectPDC(item)} className="text-[#8e9389] transition hover:text-[#465c2d]" title="Xem chi tiết">
+                        <IconEye />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer Phân trang */}
+      <div className="flex flex-col gap-4 border-t border-[#e2e5dd] px-6 py-5 text-[15px] text-[#666b62] sm:px-8 lg:flex-row lg:items-center lg:justify-between bg-white">
+        <p className="font-medium">
+          {totalItems === 0 ? 'Hiển thị 0 kết quả' : `Hiển thị ${startIndex} - ${endIndex} của ${totalItems} kết quả`}
+        </p>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 
+            disabled={currentPage === 1}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#d9ddd2] bg-white text-[#7d8277] transition hover:border-[#b9c2ad] hover:text-[#45592d] disabled:opacity-45"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="min-w-[90px] text-center text-[16px] font-semibold text-[#474d40]">
+            {currentPage} / {totalPages}
+          </span>
+          <button 
+            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} 
+            disabled={currentPage === totalPages}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#d9ddd2] bg-white text-[#7d8277] transition hover:border-[#b9c2ad] hover:text-[#45592d] disabled:opacity-45"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+function PhieuDatCocDetailView({ phieu, onBack,onCreateNewPDC }) {
+  if (!phieu) return null
+  const [isCanceling, setIsCanceling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
+  const [isPrinting, setIsPrinting] = useState(false)
+  
+  const [timeLeft, setTimeLeft] = useState('00:00:00')
+
+  useEffect(() => {
+    if (phieu?.trangThai !== 'Chờ thanh toán' || !phieu?.hanTT) return
+
+    const [datePart, timePart] = phieu.hanTT.split(' ')
+    if (!datePart || !timePart) return
+    const [day, month, year] = datePart.split('/')
+    const [hour, minute] = timePart.split(':')
+    const targetTime = new Date(year, month - 1, day, hour, minute).getTime()
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime()
+      const diff = targetTime - now
+
+      if (diff <= 0) {
+        setTimeLeft('00:00:00')
+        clearInterval(timer)
+      } else {
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        const s = Math.floor((diff % (1000 * 60)) / 1000)
+        setTimeLeft(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`)
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [phieu])
+  const handleCancelPDC = async () => {
+    if (!window.confirm(`Bạn có chắc chắn muốn hủy phiếu đặt cọc ${phieu.maPDC} không?`)) return
+    setIsCanceling(true)
+    setCancelError('')
+    try {
+      // Gọi API PATCH để hủy phiếu
+      await api.patch(`/phieu-dat-coc/${phieu.maPDC}/cancel`)
+      onRefreshList() // Cập nhật lại danh sách và đóng màn chi tiết
+      onBack() 
+    } catch (err) {
+      setCancelError(err.response?.data?.message || 'Không thể hủy phiếu đặt cọc.')
+    } finally {
+      setIsCanceling(false)
+    }
+  }
+
+  const handlePrintPDC = async () => {
+    setIsPrinting(true)
+    try {
+      // Giả lập gọi API tạo file PDF từ backend
+      const response = await api.get(`/phieu-dat-coc/${phieu.maPDC}/print`, { responseType: 'blob' })
+      const fileUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+      window.open(fileUrl, '_blank') // Mở file PDF sang tab mới để in
+    } catch (err) {
+      alert('Không thể tải file in. Vui lòng thử lại.')
+    } finally {
+      setIsPrinting(false)
+    }
+  }
+  const renderAlertBanner = () => {
+    switch(phieu.trangThai) {
+      case 'Quá hạn':
+        return (
+          <div className="mb-6 flex gap-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] p-4 text-[#b91c1c]">
+            <span className="font-bold">⚠</span>
+            <div><strong className="block text-[15px]">Phiếu đặt cọc đã quá hạn thanh toán.</strong><span className="text-[14px]">Phòng/Giường đã được trả về trạng thái Trống.</span></div>
+          </div>
+        )
+      case 'Hoàn tất':
+        return (
+          <div className="mb-6 flex gap-3 rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] p-4 text-[#15803d]">
+            <CircleCheck size={20} className="mt-0.5" />
+            <span className="text-[15px] font-medium">Phiếu đặt cọc đã hoàn tất. Thanh toán đã được Quản lý xác nhận hợp lệ.</span>
+          </div>
+        )
+      case 'Đã hủy':
+        return (
+          <div className="mb-6 flex gap-3 rounded-lg border border-[#e5e7eb] bg-[#f3f4f6] p-4 text-[#4b5563]">
+            <span className="font-bold">ⓘ</span>
+            <span className="text-[15px] font-medium">Phiếu đặt cọc đã bị hủy. Hồ sơ không còn giữ chỗ cho phòng/giường này.</span>
+          </div>
+        )
+      case 'Chờ duyệt':
+        return (
+          <div className="mb-6 flex gap-3 rounded-lg border border-[#dbeafe] bg-[#eff6ff] p-4 text-[#1d4ed8]">
+            <span className="font-bold">ⓘ</span>
+            <span className="text-[15px] font-medium">Phiếu đặt cọc đang chờ Quản lý duyệt.</span>
+          </div>
+        )
+      default: return null
+    }
+  }
+
+  // Các thẻ thông tin (Cards)
+  const CardKhachHang = () => (
+    <div className="rounded-[12px] border border-[#e5e7eb] bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-[#f3f4f6] bg-[#fafafa] px-5 py-4 text-[#374151]">
+        <UserRound size={18} />
+        <h3 className="font-bold text-[16px] text-[#111827]">Thông tin chung & Khách hàng</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-y-5 gap-x-6 p-5">
+        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Mã phiếu</span><span className="text-[15px] font-bold text-[#111827]">{phieu.maPDC}</span></div>
+        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Ngày lập</span><span className="text-[15px] text-[#111827]">{phieu.ngayLap}</span></div>
+        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Tên khách hàng</span><span className="text-[15px] font-bold text-[#111827]">{phieu.tenKH}</span></div>
+        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">SĐT</span><span className="text-[15px] text-[#111827]">{phieu.sdt || phieu.cccd}</span></div>
+        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">CCCD/CMND</span><span className="text-[15px] text-[#111827]">{phieu.cccd}</span></div>
+        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Email</span><span className="text-[15px] text-[#111827]">{phieu.email}</span></div>
+      </div>
+    </div>
+  )
+
+  const CardPhongGiuong = () => (
+    <div className="rounded-[12px] border border-[#e5e7eb] bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-[#f3f4f6] bg-[#fafafa] px-5 py-4 text-[#374151]">
+        <Home size={18} />
+        <h3 className="font-bold text-[16px] text-[#111827]">Thông tin Phòng/Giường</h3>
+      </div>
+      <div className="p-5">
+        <div className="mb-5 rounded-md bg-[#f4f5f1] px-4 py-3 text-[14px] font-semibold text-[#3b4f27]">
+           {phieu.coSo || 'Chưa cập nhật'}
+        </div>
+        <div className="grid grid-cols-2 gap-y-5">
+          <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Phòng</span><span className="text-[15px] text-[#111827]">{phieu.phong}</span></div>
+          <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Giường</span><span className="text-[15px] text-[#111827]">{phieu.giuong}</span></div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const CardThanhToan = () => (
+    <div className="rounded-[12px] border border-[#e5e7eb] bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-[#f3f4f6] bg-[#fafafa] px-5 py-4 text-[#374151]">
+        <BriefcaseBusiness size={18} />
+        <h3 className="font-bold text-[16px] text-[#111827]">Thông tin thanh toán</h3>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="flex justify-between items-center bg-[#f9fafb] p-3 rounded-lg border border-[#e5e7eb]">
+          <span className="text-[13px] font-bold text-[#4b5563] uppercase">Số tiền</span>
+          <span className="text-[18px] font-extrabold text-[#111827]">{money(phieu.soTien)}</span>
+        </div>
+        <div className="flex justify-between text-[14px]"><span className="text-[#6b7280]">Hình thức</span><span className="font-medium">{phieu.hinhThucTT || 'Chuyển khoản'}</span></div>
+        {phieu.ptMa && <div className="flex justify-between text-[14px]"><span className="text-[#6b7280]">Mã phiếu thu</span><span className="font-bold text-[#3b4f27] cursor-pointer hover:underline">{phieu.ptMa}</span></div>}
+        <div className="flex justify-between text-[14px] items-center"><span className="text-[#6b7280]">Trạng thái</span><Badge label={phieu.ptTrangThai} map={PT_BADGE} /></div>
+        {phieu.hanTT && phieu.trangThai !== 'Đã hủy' && (
+          <div className="flex justify-between text-[14px]">
+            <span className="text-[#6b7280]">{phieu.ngayTT ? 'Ngày thanh toán' : 'Hạn thanh toán'}</span>
+            <span className={`font-bold ${phieu.trangThai === 'Quá hạn' ? 'text-[#b91c1c]' : 'text-[#111827]'}`}>{phieu.ngayTT || phieu.hanTT}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // Layout linh hoạt theo đúng bản thiết kế
+  const isPending = phieu.trangThai === 'Chờ thanh toán'
+  const isCanceled = phieu.trangThai === 'Đã hủy'
+
+  return (
+    <div className="bg-white rounded-[16px] border border-[#e5e7eb] p-8 shadow-sm">
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="flex items-center gap-2 text-[#4b5563] hover:text-[#111827] transition font-medium">
+            <ArrowLeft size={20} /> Quay lại danh sách
+          </button>
+          <h2 className="text-[24px] font-extrabold text-[#111827] ml-2">Chi tiết phiếu đặt cọc {phieu.maPDC}</h2>
+          <Badge label={phieu.trangThai} map={PDC_BADGE} />
+        </div>
+        <button 
+          onClick={handlePrintPDC} 
+          disabled={isPrinting}
+          className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-4 py-2 text-[14px] font-semibold text-[#374151] hover:bg-gray-50 transition disabled:opacity-50"
+        >
+          <Printer size={16} /> {isPrinting ? 'Đang tải...' : 'In phiếu'}
+        </button>
+      </div>
+
+      {renderAlertBanner()}
+
+      {/* Grid Layout thông minh */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Cột trái (Chiếm 2 phần) */}
+        <div className="lg:col-span-2 space-y-6">
+          <CardKhachHang />
+          {isCanceled ? <CardThanhToan /> : <CardPhongGiuong />}
+          {isCanceled ? <CardPhongGiuong /> : null}
+        </div>
+
+        {/* Cột phải (Chiếm 1 phần) */}
+        <div className="space-y-6">
+          {isPending && (
+            <div className="rounded-[12px] border border-[#fef08a] bg-[#fffbeb] shadow-sm overflow-hidden text-center p-6">
+              <span className="block text-[14px] font-bold text-[#b45309] uppercase mb-2">Hạn thanh toán</span>
+              <div className="text-[28px] font-extrabold text-[#b91c1c] mb-2 tracking-widest">{timeLeft}</div>
+              <p className="text-[13px] text-[#92400e]">Khách cần thanh toán trước hạn để giữ chỗ. Quá hạn, phiếu sẽ bị hủy.</p>
+            </div>
+          )}
+          {!isCanceled && <CardThanhToan />}
+          
+          {/* Nút hành động dời qua cột phải cho Đã Hủy */}
+          {isCanceled && (
+             <div className="flex justify-end">
+               <button onClick={onBack} className="rounded-lg border border-[#d1d5db] bg-white px-6 py-2.5 font-semibold text-[#374151] hover:bg-gray-50 transition w-full">Quay lại</button>
+             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Thông báo lỗi nếu hủy thất bại */}
+      {cancelError && <div className="mt-4 text-right text-[14px] text-red-600 font-medium">{cancelError}</div>}
+
+      {/* Footer Buttons */}
+      {!isCanceled && (
+        <div className="mt-4 flex justify-end gap-3 border-t border-[#e5e7eb] pt-6">
+          {phieu.trangThai === 'Quá hạn' ? (
+            <>
+              <button onClick={onBack} className="rounded-lg border border-[#d1d5db] bg-white px-6 py-2.5 font-semibold text-[#374151] hover:bg-gray-50 transition">Quay lại</button>
+              <button onClick={onCreateNewPDC} className="rounded-lg bg-[#3b4f27] px-6 py-2.5 font-semibold text-white hover:bg-[#2d3d1e] transition shadow-md">Tạo phiếu đặt cọc mới</button>
+            </>
+          ) : phieu.trangThai === 'Hoàn tất' || phieu.trangThai === 'Chờ duyệt' ? (
+            <button onClick={onBack} className="rounded-lg border border-[#d1d5db] bg-white px-6 py-2.5 font-semibold text-[#374151] hover:bg-gray-50 transition">Quay lại</button>
+          ) : (
+            <>
+              <button 
+                onClick={handleCancelPDC}
+                disabled={isCanceling}
+                className="rounded-lg bg-[#ef4444] px-6 py-2.5 font-semibold text-white hover:bg-[#dc2626] transition shadow-md disabled:opacity-50"
+              >
+                {isCanceling ? 'Đang xử lý...' : 'Hủy phiếu'}
+              </button>
+              <button onClick={onBack} className="rounded-lg border border-[#d1d5db] bg-white px-6 py-2.5 font-semibold text-[#374151] hover:bg-gray-50 transition">Quay lại</button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 function ProfileListView({
   tab,
   searchKeyword,
@@ -97,13 +489,19 @@ function ProfileListView({
   onSearch,
   onRefresh,
   onChooseProfile,
+  // 4 Props mới để truyền dữ liệu cho màn Tra cứu của bạn:
+  danhSachView,
+  setDanhSachView,
+  selectedPDC,
+  setSelectedPDC,
+  onCreateNewPDC
 }) {
   return (
     <section>
       <div style={{ marginBottom: '20px' }}>
         <PageTitle
-          title="Lập phiếu đặt cọc"
-          description="Chọn hồ sơ đã hẹn/chờ đặt cọc để tạo phiếu giữ chỗ phòng/giường cho khách."
+          title={tab === 'lap-phieu' ? "Lập phiếu đặt cọc" : "Tra cứu phiếu đặt cọc"}
+          description={tab === 'lap-phieu' ? "Chọn hồ sơ đã hẹn/chờ đặt cọc để tạo phiếu giữ chỗ phòng/giường cho khách." : "Tìm kiếm, xem chi tiết và kiểm tra trạng thái của phiếu đặt cọc."}
         />
       </div>
 
@@ -114,7 +512,10 @@ function ProfileListView({
         <div style={S.tabRow}>
           <button
             style={{ ...S.tabBtn, ...(tab === 'lap-phieu' ? S.tabBtnActive : {}) }}
-            onClick={() => onTabChange('lap-phieu')}
+            onClick={() => {
+              onTabChange('lap-phieu')
+              setDanhSachView('list') // Reset lại view khi đổi tab
+            }}
           >
             Lập phiếu đặt cọc
           </button>
@@ -196,11 +597,14 @@ function ProfileListView({
               Hiển thị {profiles.length === 0 ? 0 : 1} đến {profiles.length} trong số {profiles.length} kết quả
             </div>
           </>
+        ) : danhSachView === 'list' ? (
+          <PhieuDatCocListView onSelectPDC={(pdc) => { setSelectedPDC(pdc); setDanhSachView('detail') }} />
         ) : (
-          <div style={S.placeholderBox}>
-            <h3 style={S.placeholderTitle}>Danh sách phiếu đặt cọc</h3>
-            <p style={S.placeholderText}>Tab này vẫn được giữ nguyên theo giao diện ban đầu. Nội dung sẽ bổ sung sau.</p>
-          </div>
+          <PhieuDatCocDetailView 
+            phieu={selectedPDC} 
+            onBack={() => setDanhSachView('list')} 
+            onCreateNewPDC={() => onCreateNewPDC(selectedPDC)} 
+          />
         )}
       </div>
     </section>
@@ -904,6 +1308,9 @@ function CancelProfileModal({ open, profile, submitting, onClose, onConfirm }) {
   )
 }
 
+
+
+
 export default function LapPhieuDatCocPage() {
   const [tab, setTab] = useState('lap-phieu')
   const [view, setView] = useState('list')
@@ -916,7 +1323,25 @@ export default function LapPhieuDatCocPage() {
   const [availableRooms, setAvailableRooms] = useState([])
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelSubmitting, setCancelSubmitting] = useState(false)
+  const [currentTab, setCurrentTab] = useState('lap-phieu') 
+  const [danhSachView, setDanhSachView] = useState('list') 
+  const [selectedPDC, setSelectedPDC] = useState(null)
 
+  const handleCreateNewPDC = (phieu) => {
+    
+    const matchedProfile = profiles.find(p => p.cccd === phieu.cccd || p.phone === phieu.sdt)
+    
+    if (matchedProfile) {
+      setTab('lap-phieu')
+      setDanhSachView('list')
+      handleChooseProfile(matchedProfile.id) // Tự động gọi hàm của Toàn để nhảy sang bước Tra cứu phòng
+    } else {
+      alert('Hồ sơ của khách hàng này hiện không ở trạng thái "Đã hẹn" để lập phiếu mới. Hệ thống sẽ chuyển về danh sách Lập phiếu để bạn kiểm tra.')
+      setTab('lap-phieu')
+      setDanhSachView('list')
+      setSearchKeyword(phieu.cccd) // Tự điền CCCD vào ô tìm kiếm
+    }
+  }
   const loadProfiles = async () => {
     setLoading(true)
     setError('')
@@ -1060,6 +1485,11 @@ export default function LapPhieuDatCocPage() {
             loadProfiles()
         }}
         onChooseProfile={handleChooseProfile}
+        danhSachView={danhSachView}
+        setDanhSachView={setDanhSachView}
+        selectedPDC={selectedPDC}
+        setSelectedPDC={setSelectedPDC}
+        onCreateNewPDC={handleCreateNewPDC}
       />
     )
   }
@@ -1086,7 +1516,7 @@ const S = {
   listCard: { backgroundColor: '#fff', border: '1px solid #dde3d8', borderRadius: '10px' },
   tabRow: { display: 'flex', gap: '4px', borderBottom: '1px solid #dde3d8', padding: '0 18px' },
   tabBtn: { padding: '12px 16px', background: 'none', border: 'none', borderBottom: '2px solid transparent', fontSize: '13px', fontWeight: 700, color: '#9aa090', cursor: 'pointer', fontFamily: 'inherit' },
-  tabBtnActive: { color: '#3b4f27', borderBottomColor: '#3b4f27' },
+  tabBtnActive: { color: '#3b4f27', borderBottom: '#3b4f27' },
 
   toolbarRow: { display: 'flex', gap: '12px', padding: '14px 18px', alignItems: 'center' },
   searchInputWrap: { position: 'relative', flex: 1 },
@@ -1149,7 +1579,31 @@ const S = {
   confirmActions: { display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' },
   caseActionList: { display: 'grid', gap: '10px' },
 }
-
+// Styles cho phần Chi tiết Tra cứu
+const D = {
+  wrapper: { backgroundColor: '#fff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #dde3d8' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+  headerLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
+  backBtn: { background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', padding: 0 },
+  title: { margin: 0, fontSize: '20px', fontWeight: 700, color: '#1f2937' },
+  printBtn: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: '6px', backgroundColor: '#fff', color: '#374151', fontSize: '14px', fontWeight: 600, cursor: 'pointer' },
+  gridCols: { display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: '24px', alignItems: 'start' },
+  colLeft: { display: 'grid', gap: '24px' },
+  colRight: { display: 'grid', gap: '24px' },
+  card: { border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#fff', overflow: 'hidden' },
+  cardHeader: { display: 'flex', alignItems: 'center', gap: '8px', padding: '16px 20px', borderBottom: '1px solid #f3f4f6', backgroundColor: '#fafafa', color: '#4b5563' },
+  cardTitle: { fontSize: '15px', fontWeight: 700, color: '#111827' },
+  cardBody: { padding: '20px' },
+  cardBodyFlex: { display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' },
+  cardBody2Col: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px' },
+  infoBlock: { display: 'flex', flexDirection: 'column', gap: '4px' },
+  label: { fontSize: '11px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' },
+  value: { fontSize: '14px', color: '#111827' },
+  valueBold: { fontSize: '14px', color: '#111827', fontWeight: 700 },
+  flexRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  priceText: { fontSize: '16px', fontWeight: 800, color: '#111827' },
+  linkText: { fontSize: '14px', fontWeight: 600, color: '#3b4f27', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' },
+}
 const R = {
   page: {
     minHeight: '100%',
