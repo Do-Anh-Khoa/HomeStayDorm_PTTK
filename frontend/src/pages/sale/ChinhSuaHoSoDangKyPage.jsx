@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BriefcaseBusiness, CircleCheck, Home, UserRound } from 'lucide-react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { fetchHoSoDangKyFormOptions, updateHoSoDangKy, fetchHoSoDangKyDetail } from '../../services/hoSoDangKy.js'
 
-const SPECIAL_REQUESTS = [
-  'Có máy lạnh', 'Giờ giấc tự do', 'Có bãi đỗ xe', 'Gần khu vệ sinh',
-  'Không gian yên tĩnh', 'Có ban công', 'Yêu cầu giường tầng dưới'
-]
+function getTomorrowDateInput() {
+  const now = new Date()
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  const year = tomorrow.getFullYear()
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
+  const day = String(tomorrow.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 function SectionHeading({ icon: Icon, title }) {
   return (
@@ -52,10 +56,34 @@ export default function ChinhSuaHoSoDangKyPage() {
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [successModal, setSuccessModal] = useState(false)
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [isEditable, setIsEditable] = useState(true)
   const [statusName, setStatusName] = useState('')
 
-  const [formOptions, setFormOptions] = useState({ branches: [], rentTypes: [], termOptions: [] })
+  const [formOptions, setFormOptions] = useState({ branches: [], rentTypes: [], termOptions: [], criteriaByBranch: {}, capacityByBranch: {} })
+
+  const availableCriteria = useMemo(() => {
+    if (!formData) {
+      return []
+    }
+
+    const branchCriteria = formOptions.criteriaByBranch?.[formData.chiNhanh] || []
+    const selectedMissingCriteria = selectedFeatures
+      .filter(item => !branchCriteria.some(option => option.value === item))
+      .map(item => ({ value: item, label: item }))
+
+    return [...branchCriteria, ...selectedMissingCriteria]
+  }, [formData, formOptions.criteriaByBranch, selectedFeatures])
+
+  const availableCapacities = useMemo(() => {
+    if (!formData) {
+      return []
+    }
+
+    return (formOptions.capacityByBranch?.[formData.chiNhanh] || [])
+      .map(value => Number(value))
+      .filter(Boolean)
+  }, [formData, formOptions.capacityByBranch])
 
   useEffect(() => {
     let isMounted = true
@@ -72,6 +100,8 @@ export default function ChinhSuaHoSoDangKyPage() {
           branches: optionsRes.branches || [],
           rentTypes: optionsRes.rentTypes || [],
           termOptions: optionsRes.termOptions || [],
+          criteriaByBranch: optionsRes.criteriaByBranch || {},
+          capacityByBranch: optionsRes.capacityByBranch || {},
         })
 
         const data = detailData
@@ -126,14 +156,85 @@ export default function ChinhSuaHoSoDangKyPage() {
     return () => { isMounted = false }
   }, [maDk])
 
+  useEffect(() => {
+    if (!formData) {
+      return
+    }
+
+    setFormData(current => {
+      if (!current || current.hinhThucThue !== 'Nguyên phòng') {
+        return current
+      }
+
+      const capacities = (formOptions.capacityByBranch?.[current.chiNhanh] || [])
+        .map(value => Number(value))
+        .filter(Boolean)
+
+      if (capacities.length === 0) {
+        if (current.soLuongNguoi === '') {
+          return current
+        }
+
+        return {
+          ...current,
+          soLuongNguoi: '',
+        }
+      }
+
+      if (capacities.includes(Number(current.soLuongNguoi))) {
+        return current
+      }
+
+      return {
+        ...current,
+        soLuongNguoi: String(capacities[0]),
+      }
+    })
+  }, [formData?.chiNhanh, formData?.hinhThucThue, formOptions.capacityByBranch])
+
+  useEffect(() => {
+    if (!formData) {
+      return
+    }
+
+    const availableValues = new Set(
+      (formOptions.criteriaByBranch?.[formData.chiNhanh] || []).map(item => item.value),
+    )
+
+    if (availableValues.size === 0) {
+      setSelectedFeatures([])
+      setFormData(current => current ? { ...current, tieuChi: '' } : current)
+      return
+    }
+
+    setSelectedFeatures(current => {
+      const filtered = current.filter(item => availableValues.has(item))
+      if (filtered.length === current.length) {
+        return current
+      }
+
+      setFormData(currentForm => currentForm ? { ...currentForm, tieuChi: filtered.join(', ') } : currentForm)
+      return filtered
+    })
+  }, [formData?.chiNhanh, formOptions.criteriaByBranch])
+
   const validateForm = () => {
     const nextErrors = {}
+    const tomorrow = getTomorrowDateInput()
     if (!formData.hoTen.trim()) nextErrors.hoTen = 'Vui lòng nhập họ và tên'
     if (!/^\d{9,15}$/.test(formData.soDienThoai.replace(/\s+/g, ''))) nextErrors.soDienThoai = 'Số điện thoại không đúng định dạng'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) nextErrors.email = 'Email không hợp lệ'
     if (!/^\d{9,20}$/.test(formData.cccd.trim())) nextErrors.cccd = 'CCCD không hợp lệ'
     if (!Number.isInteger(Number(formData.soLuongNguoi)) || Number(formData.soLuongNguoi) <= 0) nextErrors.soLuongNguoi = 'Số lượng người phải lớn hơn 0'
+    if (
+      formData.hinhThucThue === 'Nguyên phòng' &&
+      availableCapacities.length > 0 &&
+      !availableCapacities.includes(Number(formData.soLuongNguoi))
+    ) {
+      nextErrors.soLuongNguoi = `Thuê nguyên phòng chỉ được chọn đúng sức chứa phòng hiện có (${availableCapacities.join(', ')} người)`
+    }
     if (!formData.thoiGianVao) nextErrors.thoiGianVao = 'Vui lòng chọn ngày vào ở'
+    if (formData.thoiGianVao && formData.thoiGianVao < tomorrow) nextErrors.thoiGianVao = 'Thời gian dự kiến vào ở phải là ngày trong tương lai'
     return nextErrors
   }
 
@@ -166,11 +267,54 @@ export default function ChinhSuaHoSoDangKyPage() {
     }
   }
 
+  const handleCancelRequest = () => {
+    if (submitting) {
+      return
+    }
+
+    setCancelConfirmOpen(true)
+  }
+
+  const handleConfirmCancel = () => {
+    setCancelConfirmOpen(false)
+    navigate(`/sale/ho-so-dang-ky/${maDk}`)
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
   if (!formData) return <div className="p-8 text-center text-gray-500">Không tìm thấy thông tin hồ sơ.</div>
 
   return (
     <section className="relative space-y-6 pb-8">
+      {cancelConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e2418]/35 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[460px] rounded-[20px] border border-[#d8ddcf] bg-white p-6 shadow-[0_20px_60px_rgba(33,41,21,0.18)] sm:p-7">
+            <h2 className="text-[26px] font-extrabold tracking-[-0.02em] text-[#26351d]">
+              Xác nhận hủy
+            </h2>
+            <p className="mt-3 text-[16px] leading-[1.7] text-[#5c6258]">
+              Bạn có chắc muốn hủy chỉnh sửa hồ sơ không? Các thay đổi hiện tại sẽ không được lưu.
+            </p>
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setCancelConfirmOpen(false)}
+                className="inline-flex h-[48px] items-center justify-center rounded-[10px] border border-[#d9ddd2] px-6 text-[16px] font-semibold text-[#676d63] transition hover:bg-[#f5f7f1]"
+              >
+                Tiếp tục chỉnh sửa
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                className="inline-flex h-[48px] items-center justify-center rounded-[10px] bg-[#b94b45] px-6 text-[16px] font-semibold text-white transition hover:bg-[#a6403a]"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Thành Công y hệt UI */}
       {successModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e2418]/35 px-4 backdrop-blur-[2px]">
@@ -260,7 +404,6 @@ export default function ChinhSuaHoSoDangKyPage() {
                   >
                     <option value="Nam">Nam</option>
                     <option value="Nữ">Nữ</option>
-                    <option value="Khác">Khác</option>
                   </select>
                 </fieldset>
               </div>
@@ -305,7 +448,21 @@ export default function ChinhSuaHoSoDangKyPage() {
                 <InputField label="Hình thức thuê" required>
                   <select
                     value={formData.hinhThucThue}
-                    onChange={e => setFormData({...formData, hinhThucThue: e.target.value})}
+                    onChange={e => {
+                      const value = e.target.value
+                      setFormData(current => {
+                        if (value !== 'Nguyên phòng') {
+                          return { ...current, hinhThucThue: value, soLuongNguoi: current.soLuongNguoi || '1' }
+                        }
+
+                        return {
+                          ...current,
+                          hinhThucThue: value,
+                          soLuongNguoi: availableCapacities.length > 0 ? String(availableCapacities[0]) : '',
+                        }
+                      })
+                      setFieldErrors(current => ({ ...current, soLuongNguoi: '' }))
+                    }}
                     className={getFieldClass(false, !isEditable)}
                     disabled={!isEditable}
                   >
@@ -313,13 +470,30 @@ export default function ChinhSuaHoSoDangKyPage() {
                   </select>
                 </InputField>
                 <InputField label="Số lượng người" required error={fieldErrors.soLuongNguoi}>
-                  <input
-                    type="number"
-                    value={formData.soLuongNguoi}
-                    onChange={e => setFormData({...formData, soLuongNguoi: e.target.value})}
-                    className={getFieldClass(Boolean(fieldErrors.soLuongNguoi), !isEditable)}
-                    disabled={!isEditable}
-                  />
+                  {formData.hinhThucThue === 'Nguyên phòng' ? (
+                    <select
+                      value={formData.soLuongNguoi}
+                      onChange={e => setFormData({...formData, soLuongNguoi: e.target.value})}
+                      className={getFieldClass(Boolean(fieldErrors.soLuongNguoi), !isEditable)}
+                      disabled={!isEditable || availableCapacities.length === 0}
+                    >
+                      {availableCapacities.length === 0 ? (
+                        <option value="">Không có mức sức chứa phù hợp</option>
+                      ) : (
+                        availableCapacities.map(capacity => (
+                          <option key={capacity} value={capacity}>{capacity} người</option>
+                        ))
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      type="number"
+                      value={formData.soLuongNguoi}
+                      onChange={e => setFormData({...formData, soLuongNguoi: e.target.value})}
+                      className={getFieldClass(Boolean(fieldErrors.soLuongNguoi), !isEditable)}
+                      disabled={!isEditable}
+                    />
+                  )}
                 </InputField>
               </div>
 
@@ -329,6 +503,7 @@ export default function ChinhSuaHoSoDangKyPage() {
                     type="date"
                     value={formData.thoiGianVao}
                     onChange={e => setFormData({...formData, thoiGianVao: e.target.value})}
+                    min={getTomorrowDateInput()}
                     className={getFieldClass(Boolean(fieldErrors.thoiGianVao), !isEditable)}
                     disabled={!isEditable}
                   />
@@ -363,20 +538,20 @@ export default function ChinhSuaHoSoDangKyPage() {
         <div className="mt-8 space-y-5 border-t border-[#edf0ea] pt-6">
           <SectionHeading icon={CircleCheck} title="Tiện ích & yêu cầu đặc biệt" />
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {SPECIAL_REQUESTS.map(feature => (
-              <label key={feature} className={`inline-flex items-start gap-3 text-[15px] font-medium ${isEditable ? 'text-[#4d534a] cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}>
+            {availableCriteria.map(feature => (
+              <label key={feature.value} className={`inline-flex items-start gap-3 text-[15px] font-medium ${isEditable ? 'text-[#4d534a] cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}>
                 <input
                   type="checkbox"
-                  checked={selectedFeatures.includes(feature)}
+                  checked={selectedFeatures.includes(feature.value)}
                   disabled={!isEditable}
                   onChange={(e) => {
-                    const next = e.target.checked ? [...selectedFeatures, feature] : selectedFeatures.filter(i => i !== feature)
+                    const next = e.target.checked ? [...selectedFeatures, feature.value] : selectedFeatures.filter(i => i !== feature.value)
                     setSelectedFeatures(next)
                     setFormData({...formData, tieuChi: next.join(', ')})
                   }}
                   className="mt-1 h-4 w-4 rounded text-[#4b6132] focus:ring-[#4b6132]"
                 />
-                <span>{feature}</span>
+                <span>{feature.label}</span>
               </label>
             ))}
           </div>

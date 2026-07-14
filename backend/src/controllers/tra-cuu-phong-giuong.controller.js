@@ -3,7 +3,9 @@ import prisma from '../config/prisma.js'
 
 const ROOM_IMAGE =
   'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=900&q=80'
-
+// Xác định nhân viên đang đăng nhập và chi nhánh làm việc.
+// Chi nhánh này được sử dụng để giới hạn dữ liệu,
+// tránh nhân viên tra cứu phòng thuộc chi nhánh khác.
 const getCurrentEmployee = async req => {
   const maNv =
     req.auth?.ma_nv ||
@@ -75,7 +77,9 @@ const buildGioiTinhSql = () => Prisma.sql`
     ELSE 'Không xác định'
   END
 `
-
+// Chuyển dữ liệu lấy từ cơ sở dữ liệu
+// sang cấu trúc thống nhất để trả về frontend.
+// Đồng thời tính tình trạng còn hoặc hết giường.
 const mapRoomRow = row => {
   const tieuChi = splitCriteriaText(row.tieu_chi_text)
 
@@ -114,9 +118,18 @@ const mapRoomRow = row => {
     tieu_chi_text: row.tieu_chi_text || '',
   }
 }
-
+/**
+ * Bước 1.1–1.9 trong sequence.
+ *
+ * Tải dữ liệu cần thiết khi mở màn hình Tra cứu phòng/giường:
+ * - Chi nhánh của nhân viên đang đăng nhập.
+ * - Các loại phòng thuộc chi nhánh.
+ * - Danh sách tình trạng giường.
+ * - Các tiêu chí phòng thuộc chi nhánh.
+ */
 export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
   try {
+  // Bước 1: Xác định nhân viên và chi nhánh đang đăng nhập.
     const currentEmployee = await getCurrentEmployee(req)
 
     if (!currentEmployee?.ma_cn) {
@@ -126,7 +139,8 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
     }
 
     const maCn = currentEmployee.ma_cn
-
+// Bước 2: Lấy các loại phòng hiện có tại chi nhánh.
+// Tương ứng với lời gọi LoadTatCaLoaiPhong trong sequence.
     const loaiPhongOptions = await prisma.$queryRaw`
       SELECT
         lp.ma_loai AS value,
@@ -149,7 +163,8 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
         END,
         lp.ma_loai ASC
     `
-
+// Bước 3: Lấy các tiêu chí của phòng tại chi nhánh.
+// Tương ứng với lời gọi LoadTatCaTieuChi trong sequence.
     const tieuChiOptions = await prisma.$queryRaw`
       SELECT
         BTRIM(tc.ten_tc) AS value,
@@ -162,7 +177,9 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
       GROUP BY BTRIM(tc.ten_tc)
       ORDER BY BTRIM(tc.ten_tc) ASC
     `
-
+// Bước 4: Trả các danh sách lựa chọn cho màn hình.
+// Chi nhánh được giới hạn theo nhân viên đang đăng nhập;
+// tình trạng giường hiện được khai báo cố định trong code.
     res.json({
       chi_nhanh: [
         {
@@ -197,9 +214,21 @@ export const getTraCuuPhongGiuongOptions = async (req, res, next) => {
     next(error)
   }
 }
-
+/**
+ * Bước 2.1–2.10 trong sequence.
+ *
+ * Tra cứu danh sách phòng theo hai nhánh:
+ * 1. Tra cứu bằng mã phòng và các điều kiện combobox.
+ * 2. Tra cứu bằng mã hồ sơ đăng ký HSDK.
+ *
+ * Các lời gọi đến Loại phòng, Giường, Tiêu chí và Phòng
+ * trong sequence được hiện thực bằng một truy vấn SQL tổng hợp
+ * sử dụng JOIN, EXISTS và các truy vấn con.
+ */
 export const getTraCuuPhongGiuongList = async (req, res, next) => {
   try {
+    // Bước 2.1: Xác định chi nhánh của nhân viên.
+// Mọi phòng được trả về phải thuộc chi nhánh này.
     const currentEmployee = await getCurrentEmployee(req)
 
     if (!currentEmployee?.ma_cn) {
@@ -209,14 +238,16 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
     }
 
     const maCn = currentEmployee.ma_cn
-
+// Nhận các điều kiện tra cứu từ màn hình:
+// mã phòng hoặc mã HSDK, loại phòng, tình trạng và tiêu chí.
     const {
       search,
       loai_phong,
       trang_thai,
       tieu_chi,
     } = req.query
-
+// Điều kiện bắt buộc:
+// nhân viên chỉ được tra cứu phòng thuộc chi nhánh của mình.
     const where = [
       Prisma.sql`p.chi_nhanh = ${maCn}`,
     ]
@@ -227,7 +258,13 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
     const searchRoomCode = searchText.replace(/[.\s-]/g, '')
 
     if (searchText) {
+      // Nhánh 2 trong khối alt của sequence:
+// Nếu từ khóa bắt đầu bằng HSDK,
+// hệ thống tra cứu hồ sơ đăng ký và tìm phòng phù hợp.
       if (searchText.startsWith('HSDK')) {
+        // Bước 2.2–2.3:
+// Lấy thông tin hồ sơ đăng ký gồm hình thức thuê,
+// số người, thời hạn thuê và các tiêu chí yêu cầu.
         const registrationRows = await prisma.$queryRaw`
           SELECT
             ma_dk,
@@ -258,7 +295,9 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
           .split(',')
           .map(item => item.trim())
           .filter(Boolean)
-
+// Dựa vào hình thức thuê và số người trong HSDK:
+// - Nguyên phòng: toàn bộ giường của phòng phải trống.
+// - Theo giường: số giường trống phải đủ số người.
         if (soNguoi > 0) {
           if (hinhThucThue === 'nguyên phòng') {
             where.push(Prisma.sql`
@@ -286,14 +325,16 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
             `)
           }
         }
-
+// Kiểm tra thời hạn thuê trong HSDK
+// có phù hợp với thời hạn tối thiểu và tối đa của loại phòng.
         if (thoiHanThue > 0) {
           where.push(Prisma.sql`
             ${thoiHanThue} >= lp.thoi_han_toi_thieu
             AND ${thoiHanThue} <= lp.thoi_han_toi_da
           `)
         }
-
+// Chỉ chọn các phòng đáp ứng tiêu chí
+// được ghi nhận trong hồ sơ đăng ký.
         if (registrationCriteria.length > 0) {
           const criteriaConditions = registrationCriteria.map(item => {
             const keyword = `%${item}%`
@@ -416,7 +457,15 @@ export const getTraCuuPhongGiuongList = async (req, res, next) => {
     })
   }
 }
-
+/**
+ * Bước 3.2–3.8 trong sequence.
+ *
+ * Lấy thông tin chi tiết của phòng được chọn:
+ * - Thông tin và loại phòng.
+ * - Giá và thời hạn thuê.
+ * - Các tiêu chí của phòng.
+ * - Danh sách giường và trạng thái từng giường.
+ */
 export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
   try {
     const currentEmployee = await getCurrentEmployee(req)
@@ -428,6 +477,7 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
     }
 
     const maCn = currentEmployee.ma_cn
+    // Bước 3.2: Nhận mã phòng mà nhân viên chọn xem chi tiết.
     const roomCode = req.params.ma_phong?.trim().toUpperCase()
 
     if (!roomCode) {
@@ -435,7 +485,9 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
         message: 'Mã phòng không hợp lệ.',
       })
     }
-
+// Bước 3.3–3.4 và 3.7–3.8:
+// Lấy thông tin phòng, loại phòng và các tiêu chí.
+// Đồng thời kiểm tra phòng có thuộc chi nhánh nhân viên hay không.
     const rows = await prisma.$queryRaw`
       SELECT
         p.ma_phong,
@@ -490,7 +542,9 @@ export const getTraCuuPhongGiuongDetail = async (req, res, next) => {
         message: 'Không tìm thấy phòng thuộc chi nhánh của bạn.',
       })
     }
-
+// Bước 3.5–3.6:
+// Lấy danh sách giường thuộc phòng
+// cùng trạng thái và đơn giá của từng giường.
     const beds = await prisma.$queryRaw`
       SELECT
         g.ma_giuong,
