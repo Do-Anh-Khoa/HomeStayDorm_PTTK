@@ -288,6 +288,7 @@ export async function getChiTietHopDong({ maHDT, maCn = null }) {
       tenNV: contract.tenNVPhuTrach,
     },
     trangThaiPhieuDatCoc: contract.trangThaiPhieuDatCoc,
+
     beds: beds.map((bed) => ({
       maPhong: bed.maPhong,
       maGiuong: bed.maGiuong,
@@ -313,6 +314,116 @@ export async function getChiTietHopDong({ maHDT, maCn = null }) {
       dieuKhoanXuLyViPham: DIEU_KHOAN_XU_LY_VI_PHAM_MAC_DINH,
     },
   }
+}
+
+export async function LoadHDT(maHDT) {
+  const detail = await getChiTietHopDong({ maHDT })
+  if (!detail) return null
+
+  const mainTenant = detail.tenants?.[0] || null
+
+  return {
+    maHDT: detail.maHopDong,
+    maPDC: detail.maPhieuDatCoc,
+    tgVao: detail.thoiGianBatDauThue,
+    thoiHanThue: detail.thoiHanThue,
+    kyTT: detail.kyThanhToan,
+    tenKH: mainTenant?.hoTen || '',
+    cccd: mainTenant?.cccd || '',
+    sdt: mainTenant?.soDienThoai || '',
+    emailKH: mainTenant?.email || '',
+    tenNVPhuTrach: detail.nhanVienPhuTrach?.tenNV || '',
+  }
+}
+
+export async function DemSoPhieuDaLap(maHDT) {
+  const rows = await prisma.$queryRaw`
+    SELECT COUNT(*)::int AS "soPhieuDaLap"
+    FROM pt_hop_dong
+    WHERE ma_hdt = ${maHDT}
+  `
+
+  return Number(rows[0]?.soPhieuDaLap || 0)
+}
+
+export async function LoadDSGiuongThue(maHDT) {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      dcg.ma_phong AS "maPhong",
+      dcg.ma_giuong AS "maGiuong",
+      lp.gia_giuong AS "giaGiuong",
+      (
+        SELECT COUNT(*)::int
+        FROM giuong g2
+        WHERE g2.ma_phong = dcg.ma_phong
+      ) AS "tongGiuongPhong"
+    FROM hop_dong_thue hdt
+    JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hdt.ma_pdc
+    JOIN dat_coc_giuong dcg ON dcg.ma_pdc = pdc.ma_pdc
+    JOIN phong p ON p.ma_phong = dcg.ma_phong
+    JOIN loai_phong lp ON lp.ma_loai = p.ma_loai
+    WHERE hdt.ma_hdt = ${maHDT}
+    ORDER BY dcg.ma_phong ASC, dcg.ma_giuong ASC
+  `
+
+  return rows
+}
+
+export async function LoadDSHDConHieuLuc(maCN) {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      hdt.ma_hdt AS "maHDT",
+      hdt.tg_vao AS "tgVao",
+      hdt.thoi_han_thue AS "thoiHanThue",
+      hdt.ky_tt AS "kyTT",
+      hdt.ma_pdc AS "maPDC",
+      kh.ten_kh AS "tenKH",
+      kh.cccd AS "cccd",
+      kh.sdt AS "sdt",
+      kh.email AS "emailKH",
+      nv_sale.ma_cn AS "maCN"
+    FROM hop_dong_thue hdt
+    JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hdt.ma_pdc
+    JOIN khach_hang kh ON kh.ma_kh = pdc.khach_dat
+    JOIN nhanvien nv_sale ON nv_sale.ma_nv = pdc.nv_sale
+    WHERE nv_sale.ma_cn = ${maCN}
+    ORDER BY hdt.tg_tao_hd DESC, hdt.ma_hdt DESC
+  `
+
+  return rows
+}
+
+export async function TimKiemHD(tuKhoa, maCN) {
+  const like = `%${String(tuKhoa || '').trim()}%`
+
+  const rows = await prisma.$queryRaw`
+    SELECT
+      hdt.ma_hdt AS "maHDT",
+      hdt.tg_vao AS "tgVao",
+      hdt.thoi_han_thue AS "thoiHanThue",
+      hdt.ky_tt AS "kyTT",
+      hdt.ma_pdc AS "maPDC",
+      kh.ten_kh AS "tenKH",
+      kh.cccd AS "cccd",
+      kh.sdt AS "sdt",
+      kh.email AS "emailKH",
+      nv_sale.ma_cn AS "maCN"
+    FROM hop_dong_thue hdt
+    JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hdt.ma_pdc
+    JOIN khach_hang kh ON kh.ma_kh = pdc.khach_dat
+    JOIN nhanvien nv_sale ON nv_sale.ma_nv = pdc.nv_sale
+    WHERE nv_sale.ma_cn = ${maCN}
+      AND (
+        ${tuKhoa} = '' OR
+        hdt.ma_hdt ILIKE ${like} OR
+        pdc.ma_pdc ILIKE ${like} OR
+        kh.ten_kh ILIKE ${like} OR
+        kh.cccd ILIKE ${like}
+      )
+    ORDER BY hdt.tg_tao_hd DESC, hdt.ma_hdt DESC
+  `
+
+  return rows
 }
 
 function buildSyntheticEmail(cccd) {
