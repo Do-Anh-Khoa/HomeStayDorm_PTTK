@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import PageTitle from '../../components/common/PageTitle.jsx'
 import api from '../../services/api.js'
 
@@ -305,6 +306,8 @@ function ChiTietSauCapNhat({ pt, onQuayLai }) {
 }
 
 export default function CapNhatPhieuThuPage() {
+  const location = useLocation()
+  const [openCapNhatPhieuThu, setOpenCapNhatPhieuThu] = useState(() => location.state?.openCapNhatPhieuThu || null)
   const [view, setView] = useState('list')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -362,6 +365,17 @@ export default function CapNhatPhieuThuPage() {
       taiDanhSach(tuKhoa)
     }
   }
+
+  useEffect(() => {
+    if (!openCapNhatPhieuThu) return
+    if (view !== 'list') return
+    if (!openCapNhatPhieuThu.loaiPT || !openCapNhatPhieuThu.maPT) {
+      setOpenCapNhatPhieuThu(null)
+      return
+    }
+
+    handleCapNhat(openCapNhatPhieuThu).finally(() => setOpenCapNhatPhieuThu(null))
+  }, [openCapNhatPhieuThu, view])
 
   const handleXemChiTiet = async (pt) => {
     try {

@@ -13,6 +13,7 @@ import quyDinhKtxRoutes from './quy-dinh-ktx.routes.js'
 import vatDungRoutes from './vat-dung.routes.js'
 import dashboardRoutesQly from './dashboard_qly.routes.js'
 import saleDashboardRoutes from './sale-dashboard.routes.js'
+import phieuThuRoutes from './phieu-thu.routes.js'
 import hoSoDangKyRoutes from './ho-so-dang-ky.routes.js'
 import dashboardRoutes from './dashboard.routes.js'
 import phuTrachDashboardRoutes from './phu-trach-dashboard.routes.js'
@@ -43,6 +44,7 @@ router.use('/phong-giuong', phongGiuongRoutes)
 router.use('/quy-dinh-ktx', authMiddleware, quyDinhKtxRoutes)
 router.use('/vat-dung', vatDungRoutes)
 router.use('/sale-dashboard', authMiddleware, saleDashboardRoutes)
+router.use('/phieu-thu', phieuThuRoutes)
 router.use('/ho-so-dang-ky', authMiddleware, hoSoDangKyRoutes)
 router.use('/dashboard-qly', authMiddleware, dashboardRoutesQly)
 router.use('/dashboard', authMiddleware, dashboardRoutes)
