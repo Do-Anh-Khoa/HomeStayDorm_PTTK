@@ -29,6 +29,7 @@ import capNhatPhieuThuQLRoutes from './capNhatPhieuThuQLRoutes.js'
 import capNhatPhieuThuSaleRoutes from './capNhatPhieuThuSaleRoutes.js'
 import phieuDatCocRoutes from './phieu-dat-coc.routes.js'
 import hopDongThueRoutes from './hop-dong-thue.routes.js'
+import lichHenRoutes from './lich-hen.routes.js'
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -62,4 +63,5 @@ router.use('/cap-nhat-phieu-thu-sale', authMiddleware, capNhatPhieuThuSaleRoutes
 
 router.use('/phieu-dat-coc', authMiddleware, phieuDatCocRoutes)
 router.use('/hop-dong-thue', authMiddleware, hopDongThueRoutes)
+router.use('/lich-hen', authMiddleware, lichHenRoutes)
 export default router
