@@ -60,8 +60,7 @@ export async function searchKhachTraPhong({ keyword, maCn }) {
           LIMIT 1
         ),
         ''
-      ) AS "phongGiuong"
-      ,
+      ) AS "phongGiuong",
       hdt.tg_tao_hd AS "sortTime"
     FROM hop_dong_thue hdt
     JOIN phieu_dat_coc pdc ON pdc.ma_pdc = hdt.ma_pdc
@@ -122,8 +121,7 @@ export async function searchKhachTraPhong({ keyword, maCn }) {
           LIMIT 1
         ),
         ''
-      ) AS "phongGiuong"
-      ,
+      ) AS "phongGiuong",
       pdc.ngay_dc AS "sortTime"
     FROM phieu_dat_coc pdc
     JOIN khach_hang kh ON kh.ma_kh = pdc.khach_dat
@@ -210,15 +208,11 @@ export async function createHoSoTraPhong({
     throw error
   }
 
-  // Gom phần xử lý ngày lên dùng chung cho cả 2 trường hợp
   const dateOnly = parseDateOnly(ngayTraPhongDuKien)
   const tgHen = toVnAppointmentDate(dateOnly)
-  // Nếu có tgHen thì dùng, không thì lấy mặc định để tránh lỗi SQL
   const expectedReturnDate = tgHen || new Date()
 
-  // ==========================================
-  // TRƯỜNG HỢP 1: CÓ HỢP ĐỒNG THUÊ
-  // ==========================================
+  // 1. TRƯỜNG HỢP CÓ HỢP ĐỒNG THUÊ
   if (isContractCase) {
     if (!maKH) {
       const error = new Error('Thiếu thông tin khách thuê.')
@@ -274,7 +268,6 @@ export async function createHoSoTraPhong({
     }
 
     const created = await prisma.$transaction(async (tx) => {
-      // Ép kiểu ::timestamp để đảm bảo DB nhận đúng ngày trả phòng dự kiến
       const insertedRows = await tx.$queryRaw`
         INSERT INTO ho_so_tra_phong (nv_sale, ma_pdc, ma_hdt, ma_khach_thue, ghi_nhan_hu_hai, ngay_tp)
         VALUES (${maNVSale}, ${contract.ma_pdc}, ${contract.ma_hdt}, ${maKH}, FALSE, ${expectedReturnDate}::timestamp)
@@ -282,15 +275,6 @@ export async function createHoSoTraPhong({
       `
 
       const hstp = insertedRows[0]
-
-      const lich = await tx.lich_hen_tra_phong.create({
-        data: {
-          tg_hen: tgHen,
-          ma_tp: hstp.ma_tp,
-          nv_sale: maNVSale,
-        },
-        select: { tg_hen: true },
-      })
 
       const infoRows = await tx.$queryRaw`
         SELECT
@@ -316,7 +300,6 @@ export async function createHoSoTraPhong({
 
       return {
         hstp,
-        lich,
         mailInfo: infoRows[0] || null,
       }
     })
@@ -326,16 +309,14 @@ export async function createHoSoTraPhong({
       maPdc: created.hstp.ma_pdc,
       maHopDong: created.hstp.ma_hdt,
       maKhachThue: created.hstp.ma_khach_thue,
-      ngayLap: created.hstp.ngay_tp,
-      tgHen: created.lich.tg_hen,
+      ngayLap: created.hstp.ngay_tp, // Lúc này ngay_tp đã là expectedReturnDate
+      tgHen: created.hstp.ngay_tp,
       mailInfo: created.mailInfo,
       canSendEmail: true,
     }
   }
 
-  // ==========================================
-  // TRƯỜNG HỢP 2: CHỈ CÓ PHIẾU ĐẶT CỌC
-  // ==========================================
+  // 2. TRƯỜNG HỢP CHỈ CÓ PHIẾU ĐẶT CỌC
   const deposit = await prisma.phieu_dat_coc.findUnique({
     where: { ma_pdc: maPDC },
     select: { ma_pdc: true, khach_dat: true, trang_thai: true },
@@ -389,7 +370,6 @@ export async function createHoSoTraPhong({
   }
 
   const created = await prisma.$transaction(async (tx) => {
-    // Ép kiểu ::timestamp để đảm bảo DB nhận đúng ngày trả phòng dự kiến
     const insertedRows = await tx.$queryRaw`
       INSERT INTO ho_so_tra_phong (nv_sale, ma_pdc, ma_hdt, ma_khach_thue, ghi_nhan_hu_hai, ngay_tp)
       VALUES (${maNVSale}, ${deposit.ma_pdc}, NULL, NULL, FALSE, ${expectedReturnDate}::timestamp)
@@ -416,14 +396,7 @@ export async function autoCancelOverdueHoSoTraPhong(maCn) {
     UPDATE ho_so_tra_phong h
     SET ngay_huy = NOW()
     WHERE h.ngay_huy IS NULL
-      AND EXISTS (
-        SELECT 1
-        FROM lich_hen_tra_phong l
-        WHERE l.ma_tp = h.ma_tp
-          AND (l.tg_hen + INTERVAL '7 hour') <
-            date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')
-        LIMIT 1
-      )
+      AND (h.ngay_tp + INTERVAL '7 hour') < date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')
       AND EXISTS (
         SELECT 1
         FROM dat_coc_giuong dcg
@@ -459,17 +432,10 @@ export async function listHoSoTraPhong({ maCn }) {
         ),
         ''
       ) AS "phongGiuong",
-      COALESCE(to_char(lh.tg_hen, 'YYYY-MM-DD'), 'Giải quyết trong ngày') AS "ngayTraPhong"
+      COALESCE(to_char(h.ngay_tp, 'YYYY-MM-DD'), 'Giải quyết trong ngày') AS "ngayTraPhong"
     FROM ho_so_tra_phong h
     JOIN phieu_dat_coc pdc ON pdc.ma_pdc = h.ma_pdc
     JOIN khach_hang kh ON kh.ma_kh = COALESCE(h.ma_khach_thue, pdc.khach_dat)
-    LEFT JOIN LATERAL (
-      SELECT tg_hen
-      FROM lich_hen_tra_phong
-      WHERE ma_tp = h.ma_tp
-      ORDER BY tg_hen DESC, ma_lich DESC
-      LIMIT 1
-    ) lh ON TRUE
     WHERE h.ngay_huy IS NULL
       AND EXISTS (
         SELECT 1
@@ -507,8 +473,8 @@ export async function getChiTietHoSoTraPhong({ maTP, maCn }) {
       kh.sdt AS "soDienThoai",
       kh.email AS "email",
       to_char(hdt.tg_vao, 'YYYY-MM-DD') AS "ngayVao",
-      to_char(lh.tg_hen, 'YYYY-MM-DD') AS "ngayTraPhongDuKien",
-      to_char(lh.tg_hen, 'HH24:MI - DD/MM/YYYY') AS "lichHenTraPhong",
+      to_char(h.ngay_tp, 'YYYY-MM-DD') AS "ngayTraPhongDuKien",
+      to_char(h.ngay_tp, 'HH24:MI - DD/MM/YYYY') AS "lichHenTraPhong",
       CASE
         WHEN h.ma_hdt IS NULL THEN pdc.trang_thai
         ELSE COALESCE(
@@ -545,13 +511,6 @@ export async function getChiTietHoSoTraPhong({ maTP, maCn }) {
     JOIN khach_hang kh ON kh.ma_kh = COALESCE(h.ma_khach_thue, pdc.khach_dat)
     JOIN nhanvien nv ON nv.ma_nv = h.nv_sale
     LEFT JOIN hop_dong_thue hdt ON hdt.ma_hdt = h.ma_hdt
-    LEFT JOIN LATERAL (
-      SELECT tg_hen
-      FROM lich_hen_tra_phong
-      WHERE ma_tp = h.ma_tp
-      ORDER BY tg_hen DESC, ma_lich DESC
-      LIMIT 1
-    ) lh ON TRUE
     WHERE h.ma_tp = ${maTP}
       AND h.ngay_huy IS NULL
       AND EXISTS (
