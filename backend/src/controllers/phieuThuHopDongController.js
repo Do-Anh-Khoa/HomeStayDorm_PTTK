@@ -101,24 +101,9 @@ export async function lapVaLuuPTHD(req, res) {
       maHDT,
       tongTien: thongTin.tongTien,
       nvKeToan: nv.ma_nv,
-      ghiChu: JSON.stringify({
-        __snapshot: 'PTHD',
-        maHDT: thongTin.maHDT,
-        maPDC: thongTin.maPDC,
-        tgVao: thongTin.tgVao,
-        thoiHanThue: thongTin.thoiHanThue,
-        kyTT: thongTin.kyTT,
-        kyHienTai: thongTin.kyHienTai,
-        tenKH: thongTin.tenKH,
-        cccd: thongTin.cccd,
-        sdt: thongTin.sdt,
-        emailKH: thongTin.emailKH,
-        tenNVPhuTrach: thongTin.tenNVPhuTrach,
-        tongTien: thongTin.tongTien,
-        dsGiuong: thongTin.dsGiuong,
-        maNVKeToan: nv.ma_nv,
-      }),
+      ghiChu: null
     })
+    
 
     const pthdChiTiet = await PhieuThuHopDong.LoadPTHD(pthdMoi.maPTHD)
     const pthdHoanChinh = {
