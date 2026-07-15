@@ -210,6 +210,15 @@ export async function createHoSoTraPhong({
     throw error
   }
 
+  // Gom phần xử lý ngày lên dùng chung cho cả 2 trường hợp
+  const dateOnly = parseDateOnly(ngayTraPhongDuKien)
+  const tgHen = toVnAppointmentDate(dateOnly)
+  // Nếu có tgHen thì dùng, không thì lấy mặc định để tránh lỗi SQL
+  const expectedReturnDate = tgHen || new Date()
+
+  // ==========================================
+  // TRƯỜNG HỢP 1: CÓ HỢP ĐỒNG THUÊ
+  // ==========================================
   if (isContractCase) {
     if (!maKH) {
       const error = new Error('Thiếu thông tin khách thuê.')
@@ -264,13 +273,11 @@ export async function createHoSoTraPhong({
       throw error
     }
 
-    const dateOnly = parseDateOnly(ngayTraPhongDuKien)
-    const tgHen = toVnAppointmentDate(dateOnly)
-
     const created = await prisma.$transaction(async (tx) => {
+      // Ép kiểu ::timestamp để đảm bảo DB nhận đúng ngày trả phòng dự kiến
       const insertedRows = await tx.$queryRaw`
-        INSERT INTO ho_so_tra_phong (nv_sale, ma_pdc, ma_hdt, ma_khach_thue, ghi_nhan_hu_hai)
-        VALUES (${maNVSale}, ${contract.ma_pdc}, ${contract.ma_hdt}, ${maKH}, FALSE)
+        INSERT INTO ho_so_tra_phong (nv_sale, ma_pdc, ma_hdt, ma_khach_thue, ghi_nhan_hu_hai, ngay_tp)
+        VALUES (${maNVSale}, ${contract.ma_pdc}, ${contract.ma_hdt}, ${maKH}, FALSE, ${expectedReturnDate}::timestamp)
         RETURNING ma_tp, ma_pdc, ma_hdt, ma_khach_thue, ngay_tp
       `
 
@@ -326,6 +333,9 @@ export async function createHoSoTraPhong({
     }
   }
 
+  // ==========================================
+  // TRƯỜNG HỢP 2: CHỈ CÓ PHIẾU ĐẶT CỌC
+  // ==========================================
   const deposit = await prisma.phieu_dat_coc.findUnique({
     where: { ma_pdc: maPDC },
     select: { ma_pdc: true, khach_dat: true, trang_thai: true },
@@ -379,9 +389,10 @@ export async function createHoSoTraPhong({
   }
 
   const created = await prisma.$transaction(async (tx) => {
+    // Ép kiểu ::timestamp để đảm bảo DB nhận đúng ngày trả phòng dự kiến
     const insertedRows = await tx.$queryRaw`
-      INSERT INTO ho_so_tra_phong (nv_sale, ma_pdc, ma_hdt, ma_khach_thue, ghi_nhan_hu_hai)
-      VALUES (${maNVSale}, ${deposit.ma_pdc}, NULL, NULL, FALSE)
+      INSERT INTO ho_so_tra_phong (nv_sale, ma_pdc, ma_hdt, ma_khach_thue, ghi_nhan_hu_hai, ngay_tp)
+      VALUES (${maNVSale}, ${deposit.ma_pdc}, NULL, NULL, FALSE, ${expectedReturnDate}::timestamp)
       RETURNING ma_tp, ma_pdc, ma_hdt, ma_khach_thue, ngay_tp
     `
 
