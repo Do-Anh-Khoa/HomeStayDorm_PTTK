@@ -316,6 +316,8 @@ export default function CapNhatPhieuThuPage() {
   const [lichSu, setLichSu] = useState([])
   const [chiTietPT, setChiTietPT] = useState(null)
   const [ngayThanhToan, setNgayThanhToan] = useState(toDateTimeLocalValue())
+  const [showConfirmXacNhan, setShowConfirmXacNhan] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
 
   const pageTitle = useMemo(() => {
     if (view === 'update') return 'Cập Nhật Trạng Thái Phiếu Thu'
@@ -348,6 +350,12 @@ export default function CapNhatPhieuThuPage() {
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, tuKhoa])
+
+  useEffect(() => {
+  if (!successMsg) return
+  const timer = setTimeout(() => setSuccessMsg(''), 3500)
+  return () => clearTimeout(timer)
+}, [successMsg])
 
   const loadChiTiet = async (pt) => {
     const res = await api.get(`${API_BASE}/${pt.loaiPT}/${pt.maPT}`)
@@ -387,15 +395,15 @@ export default function CapNhatPhieuThuPage() {
     }
   }
 
-  const handleXacNhanThanhToan = async () => {
+  const handleXacNhanClick = () => {
     if (!ngayThanhToan) {
       alert('Vui lòng nhập thời điểm thanh toán.')
       return
     }
     if (new Date(ngayThanhToan) > new Date()) {
-    alert('Thời điểm thanh toán không thể lớn hơn thời gian hiện tại.')
-    return
-  }
+      alert('Thời điểm thanh toán không thể lớn hơn thời gian hiện tại.')
+      return
+    }
     if (!isValidDateTimeLocal(ngayThanhToan)) {
       alert('Thời điểm thanh toán không hợp lệ.')
       return
@@ -419,12 +427,19 @@ export default function CapNhatPhieuThuPage() {
         return
       }
     }
+
+    // Qua hết kiểm tra -> mở modal hỏi xác nhận, KHÔNG gọi API ngay
+    setShowConfirmXacNhan(true)
+  }
+
+  const submitXacNhanThanhToan = async () => {
+    setShowConfirmXacNhan(false)
     setSaving(true)
     try {
       await api.patch(`${API_BASE}/${chiTietPT.loaiPT}/${chiTietPT.maPT}/xac-nhan-thanh-toan`, {
         ngayThanhToan,
       })
-      alert('Cập nhật trạng thái phiếu thu thành công.')
+      setSuccessMsg('Cập nhật trạng thái phiếu thu thành công.')
       await taiDanhSach(tuKhoa)
       setView('list')
     } catch (err) {
@@ -436,6 +451,11 @@ export default function CapNhatPhieuThuPage() {
 
   return (
     <section>
+      {successMsg && (
+        <div style={S.successBanner}>
+          ✅ {successMsg}
+        </div>
+      )}
       {view === 'list' ? (
         <div style={S.titleWrap}>
           <PageTitle
@@ -473,13 +493,31 @@ export default function CapNhatPhieuThuPage() {
             setNgayThanhToan={setNgayThanhToan}
             saving={saving}
             onHuy={() => setView('list')}
-            onXacNhan={handleXacNhanThanhToan}
+            onXacNhan={handleXacNhanClick}
           />
         </>
       )}
 
       {view === 'detail' && chiTietPT && (
         <ChiTietSauCapNhat pt={chiTietPT} onQuayLai={() => setView('list')} />
+      )}
+      {showConfirmXacNhan && (
+        <div style={S.modalOverlay}>
+          <div style={S.confirmBox}>
+            <h3 style={S.confirmTitle}>Xác nhận cập nhật trạng thái</h3>
+            <p style={S.confirmText}>
+              Bạn có chắc chắn muốn cập nhật trạng thái phiếu thu sang <b>Đã thanh toán</b> không?
+            </p>
+            <div style={S.confirmActions}>
+              <button style={S.btnOutline} onClick={() => setShowConfirmXacNhan(false)} disabled={saving}>
+                Hủy
+              </button>
+              <button style={S.btnPrimary} onClick={submitXacNhanThanhToan} disabled={saving}>
+                {saving ? 'Đang cập nhật...' : 'Xác nhận'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   )
@@ -768,5 +806,49 @@ const S = {
     borderTop: '1px solid #dfe5da',
     marginTop: '22px',
     paddingTop: '16px',
+  },
+  successBanner: {
+    backgroundColor: '#e6f4e1',
+    border: '1px solid #b7dba9',
+    color: '#2f6b25',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    fontSize: '14px',
+    fontWeight: 700,
+    marginBottom: '18px',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  confirmBox: {
+    width: 'min(420px, calc(100vw - 32px))',
+    backgroundColor: '#fff',
+    borderRadius: '10px',
+    padding: '22px 24px',
+    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18)',
+  },
+  confirmTitle: {
+    margin: 0,
+    color: '#1a1f14',
+    fontSize: '20px',
+    fontWeight: 800,
+  },
+  confirmText: {
+    margin: '12px 0 0',
+    color: '#4f5946',
+    fontSize: '14px',
+    lineHeight: 1.5,
+  },
+  confirmActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    marginTop: '22px',
   },
 }
