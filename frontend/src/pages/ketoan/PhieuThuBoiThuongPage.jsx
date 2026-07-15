@@ -50,7 +50,7 @@ function DanhSachBTChoXuLy({ dsChoXuLy, dsDaLap, tuKhoa, setTuKhoa, loading, onC
               <tr>
                 <th style={S.th}>Mã biên bản</th>
                 <th style={S.th}>Khách hàng</th>
-                <th style={S.th}>Ngày lập</th>
+                <th style={S.th}>Ngày lập biên bản</th>
                 <th style={S.th}>Lần vi phạm</th>
                 <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
               </tr>
@@ -91,7 +91,7 @@ function DanhSachBTChoXuLy({ dsChoXuLy, dsDaLap, tuKhoa, setTuKhoa, loading, onC
               <tr>
                 <th style={S.th}>Mã phiếu thu</th>
                 <th style={S.th}>Mã biên bản</th>
-                <th style={S.th}>Ngày lập</th>
+                <th style={S.th}>Ngày lập phiếu thu</th>
                 <th style={S.th}>Tổng tiền phạt</th>
                 <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
               </tr>
@@ -133,7 +133,7 @@ function BieuMauLapPT({ thongTin, saving, errorMsg, onHuy, onTao }) {
             <FormField label="Khách hàng vi phạm" value={thongTin.tenKH} />
             <FormField label="Mã biên bản" value={thongTin.maBT} />
             <FormField label="CCCD" value={thongTin.cccd} />
-            <FormField label="Ngày lập" value={formatNgay(thongTin.ngayBT)} />
+            <FormField label="Ngày lập biên bản" value={formatNgay(thongTin.ngayBT)} />
             <FormField label="SĐT" value={thongTin.sdt} />
             <FormField
               label="Lịch sử vi phạm"
@@ -228,7 +228,7 @@ function ChiTietPT({ pt, onQuayLai, onIn, printing }) {
             <FormField label="Khách hàng vi phạm" value={pt.tenKH} />
             <FormField label="Mã biên bản" value={pt.maBT} />
             <FormField label="CCCD" value={pt.cccd} />
-            <FormField label="Ngày lập" value={formatNgay(pt.ngayBT)} />
+            <FormField label="Ngày lập biên bản" value={formatNgay(pt.ngayBT)} />
             <FormField label="SĐT" value={pt.sdt} />
             <FormField label="Lịch sử vi phạm" value={`Lần ${pt.soLanViPham}`} highlight />
           </div>
@@ -294,7 +294,7 @@ export default function LapPTBoiThuongPage() {
 
   const [thongTinLap, setThongTinLap] = useState(null)
   const [chiTietPT, setChiTietPT] = useState(null)
-
+  const [showConfirmTao, setShowConfirmTao] = useState(false)
   const taiDanhSach = async (tuKhoaHienTai) => {
     setLoading(true)
     try {
@@ -436,7 +436,7 @@ export default function LapPTBoiThuongPage() {
           saving={saving}
           errorMsg={errorMsg}
           onHuy={() => setView('list')}
-          onTao={handleTaoPhieu}
+          onTao={() => setShowConfirmTao(true)}
         />
       )}
 
@@ -448,11 +448,42 @@ export default function LapPTBoiThuongPage() {
           printing={printing}
         />
       )}
+
+      {showConfirmTao && (
+  <div style={S.modalOverlay}>
+    <div style={S.confirmBox}>
+      <h3 style={S.confirmTitle}>Xác nhận tạo phiếu thu</h3>
+      <p style={S.confirmText}>Bạn có xác nhận muốn tạo phiếu thu bồi thường?</p>
+
+      <div style={S.confirmActions}>
+        <button
+          style={S.btnGhost}
+          onClick={() => setShowConfirmTao(false)}
+          disabled={saving}
+        >
+          Hủy
+        </button>
+
+        <button
+          style={S.btnPrimary}
+          onClick={() => {
+            setShowConfirmTao(false)
+            handleTaoPhieu()
+          }}
+          disabled={saving}
+        >
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </section>
   )
 }
 
 const S = {
+  
   errMsg: {
     margin: '0 0 18px',
     fontSize: '13.5px',
@@ -538,6 +569,45 @@ const S = {
     fontSize: '12px',
     fontWeight: 700,
   },
+
+  modalOverlay: {
+  position: 'fixed',
+  inset: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 999,
+},
+
+confirmBox: {
+  width: 'min(420px, calc(100vw - 32px))',
+  backgroundColor: '#fff',
+  borderRadius: '10px',
+  padding: '22px 24px',
+  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18)',
+},
+
+confirmTitle: {
+  margin: 0,
+  color: '#1a1f14',
+  fontSize: '20px',
+  fontWeight: 800,
+},
+
+confirmText: {
+  margin: '12px 0 0',
+  color: '#4f5946',
+  fontSize: '14px',
+  lineHeight: 1.5,
+},
+
+confirmActions: {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  gap: '10px',
+  marginTop: '22px',
+},
   badgeWarning: {
     display: 'inline-block',
     padding: '4px 12px',

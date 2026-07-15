@@ -87,7 +87,7 @@ function DanhSachPDCChoLap({ dsChoLap, dsDaLap, tuKhoa, setTuKhoa, loading, onCh
               <tr>
                 <th style={S.th}>Mã phiếu thu</th>
                 <th style={S.th}>Mã đặt cọc</th>
-                <th style={S.th}>Ngày lập</th>
+                <th style={S.th}>Ngày lập phiếu thu</th>
                 <th style={S.th}>Tổng tiền cọc</th>
                 <th style={{ ...S.th, textAlign: 'center' }}>Thao tác</th>
               </tr>
@@ -157,7 +157,7 @@ function BieuMauLapPTDC({ thongTin, saving, errorMsg, onHuy, onTao }) {
             <FormField label="Họ tên" value={thongTin.tenKH} />
             <FormField label="Mã đặt cọc" value={thongTin.maPDC} />
             <FormField label="CCCD" value={thongTin.cccd} />
-            <FormField label="Ngày lập" value={formatNgay(thongTin.ngayDC)} />
+            <FormField label="Ngày cọc" value={formatNgay(thongTin.ngayDC)} />
             <FormField label="SĐT" value={thongTin.sdt} />
             <FormField label="NV Sale" value={thongTin.tenNVSale} />
           </div>
@@ -176,7 +176,7 @@ function BieuMauLapPTDC({ thongTin, saving, errorMsg, onHuy, onTao }) {
           <div style={S.formSectionTitle}>Thông tin chứng từ</div>
           <div style={S.formGrid}>
             <FormField label="Nhân viên kế toán" value={thongTin.tenNVKeToan} />
-            <FormField label="Ngày lập phiếu" value={formatNgay(new Date())} />
+            <FormField label="Ngày lập phiếu thu" value={formatNgay(new Date())} />
           </div>
           <div style={{ marginTop: '20px', marginBottom: '16px' }}>
             <div style={S.fieldLabel}>Trạng thái phiếu thu</div>
@@ -222,7 +222,7 @@ function ChiTietPTDC({ pt, onQuayLai, onIn, printing }) {
             <FormField label="Họ tên" value={pt.tenKH} />
             <FormField label="Mã đặt cọc" value={pt.maPDC} />
             <FormField label="CCCD" value={pt.cccd} />
-            <FormField label="Ngày lập" value={formatNgay(pt.ngayDC)} />
+            <FormField label="Ngày cọc" value={formatNgay(pt.ngayDC)} />
             <FormField label="SĐT" value={pt.sdt} />
             <FormField label="NV Sale" value={pt.tenNVSale} />
           </div>
@@ -241,7 +241,7 @@ function ChiTietPTDC({ pt, onQuayLai, onIn, printing }) {
           <div style={S.formSectionTitle}>Thông tin chứng từ</div>
           <div style={S.formGrid}>
             <FormField label="Nhân viên kế toán" value={pt.tenNVKeToan} />
-            <FormField label="Ngày lập phiếu" value={formatNgay(pt.ngay)} />
+            <FormField label="Ngày lập phiếu thu" value={formatNgay(pt.ngay)} />
           </div>
         </div>
 
@@ -270,6 +270,7 @@ export default function LapPTDatCocPage() {
   const [dsDaLap, setDsDaLap] = useState([])
   const [thongTinLap, setThongTinLap] = useState(null)
   const [chiTietPT, setChiTietPT] = useState(null)
+  const [showConfirmTao, setShowConfirmTao] = useState(false)
 
   const taiDanhSach = async (tuKhoaHienTai) => {
     setLoading(true)
@@ -407,7 +408,7 @@ export default function LapPTDatCocPage() {
           saving={saving}
           errorMsg={errorMsg}
           onHuy={() => setView('list')}
-          onTao={handleTaoPhieu}
+          onTao={() => setShowConfirmTao(true)} 
         />
       )}
 
@@ -419,6 +420,31 @@ export default function LapPTDatCocPage() {
           printing={printing}
         />
       )}
+
+      {showConfirmTao && (
+  <div style={S.modalOverlay}>
+    <div style={S.confirmBox}>
+      <h3 style={S.confirmTitle}>Xác nhận tạo phiếu thu</h3>
+      <p style={S.confirmText}>Bạn có xác nhận muốn tạo phiếu thu đặt cọc?</p>
+
+      <div style={S.confirmActions}>
+        <button style={S.btnGhost} onClick={() => setShowConfirmTao(false)} disabled={saving}>
+          Hủy
+        </button>
+        <button
+          style={S.btnPrimary}
+          onClick={() => {
+            setShowConfirmTao(false)
+            handleTaoPhieu()
+          }}
+          disabled={saving}
+        >
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </section>
   )
 }
@@ -493,6 +519,41 @@ const S = {
   formGrid: {
     display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '18px',
   },
+
+  modalOverlay: {
+  position: 'fixed',
+  inset: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 999,
+},
+confirmBox: {
+  width: 'min(420px, calc(100vw - 32px))',
+  backgroundColor: '#fff',
+  borderRadius: '10px',
+  padding: '22px 24px',
+  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18)',
+},
+confirmTitle: {
+  margin: 0,
+  color: '#1a1f14',
+  fontSize: '20px',
+  fontWeight: 800,
+},
+confirmText: {
+  margin: '12px 0 0',
+  color: '#4f5946',
+  fontSize: '14px',
+  lineHeight: 1.5,
+},
+confirmActions: {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  gap: '10px',
+  marginTop: '22px',
+},
   fieldLabel: { fontSize: '15px', color: '#9aa090', marginBottom: '5px' },
   fieldValue: { fontSize: '16.5px', color: '#1a1f14', fontWeight: 600 },
   mailNote: {
