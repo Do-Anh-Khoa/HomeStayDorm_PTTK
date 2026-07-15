@@ -39,7 +39,7 @@ class HopDongThue {
     const soNgayConLaiHD = soNgayGiua(ngayMoc, ngayKetThuc)
     const kyTTTinhNgay = kyTT * NGAY_MOI_THANG
     const laKyCuoi = soNgayConLaiHD < kyTTTinhNgay - SO_NGAY_DEM
-    const duDieuKien = ngayHienTai >= ngayMoc || laKyCuoi
+    const duDieuKien = (soPhieuDaLap === 0) || (ngayHienTai >= ngayMoc) || laKyCuoi
 
     return { ngayMoc, ngayKetThuc, kyHienTai, duDieuKien, laKyCuoi, soNgayConLaiHD }
   }

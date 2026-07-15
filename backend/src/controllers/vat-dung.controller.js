@@ -3,6 +3,16 @@ import prisma from '../config/prisma.js'
 const DELETE_BLOCKED_MESSAGE =
   'Không thể xóa vật dụng vì vật dụng đang được liên kết với dữ liệu khác.'
 
+const PROTECTED_DELETE_MESSAGE =
+  'Không thể xóa các vật dụng mặc định của hệ thống.'
+
+const PROTECTED_VAT_DUNG_CODES = new Set([
+  'VD001',
+  'VD002',
+  'VD003',
+  'VD004',
+  'VD005',
+])
 const validateVatDungPayload = ({ ten_vd, gia_boi_thuong }) => {
   const errors = {}
 
@@ -146,6 +156,12 @@ export const deleteVatDung = async (req, res, next) => {
     if (!itemCode) {
       return res.status(400).json({
         message: 'Mã vật dụng không hợp lệ.',
+      })
+    }
+
+    if (PROTECTED_VAT_DUNG_CODES.has(itemCode)) {
+      return res.status(403).json({
+        message: PROTECTED_DELETE_MESSAGE,
       })
     }
 

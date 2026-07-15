@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   huyHoSoTraPhong,
+  inHoSoTraPhongPDF,
   lapHoSoTraPhong,
   loadDanhSachHoSoTraPhong,
   timKiemKhachThueTraPhong,
@@ -12,6 +13,7 @@ const router = Router()
 router.get('/', loadDanhSachHoSoTraPhong)
 router.get('/search', timKiemKhachThueTraPhong)
 router.post('/', lapHoSoTraPhong)
+router.get('/:maTP/pdf', inHoSoTraPhongPDF)
 router.get('/:maTP', xemChiTietHoSoTraPhong)
 router.post('/:maTP/huy', huyHoSoTraPhong)
 
