@@ -16,12 +16,12 @@ function parseSnapshot(ghiChu) {
 // (khác với cách ThemPTDC cũ insert NULL) nên ở đây gán = nv_ke_toan (người
 // tạo phiếu) để không vi phạm ràng buộc.
 class PhieuThuHopDongDB {
-  static async ThemPTHD({ maHDT, tongTien, nvKeToan, ghiChu }) {
+  static async ThemPTHD({ maHDT, tongTien, nvKeToan }) {
     const rows = await prisma.$queryRaw`
       INSERT INTO pt_hop_dong
         (ngay, trang_thai, tong_tien, nv_ke_toan, nv_cap_nhat, ghi_chu, ma_hdt)
       VALUES
-        (CURRENT_TIMESTAMP, 'Chưa thanh toán', ${tongTien}, ${nvKeToan}, ${nvKeToan}, ${ghiChu || null}, ${maHDT})
+        (CURRENT_TIMESTAMP, 'Chưa thanh toán', ${tongTien}, ${nvKeToan}, ${nvKeToan}, NULL, ${maHDT})
       RETURNING ma_pthd         AS "maPTHD",
                 ngay            AS "ngay",
                 ngay_thanh_toan AS "ngayThanhToan",
@@ -34,7 +34,6 @@ class PhieuThuHopDongDB {
     `
     return rows[0]
   }
-
   // LoadPTHD(maPTHD): PhieuThuHopDong — kèm HĐT + KH + NV phụ trách + NV kế toán
   static async LoadPTHD(maPTHD) {
     const baseRows = await prisma.$queryRaw`

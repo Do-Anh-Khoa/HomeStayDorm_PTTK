@@ -74,7 +74,7 @@ export const guiEmailYeuCauThanhToanHopDong = async (pthd) => {
             <span style="font-size: 24px; font-weight: bold; color: #c0392b;">${formatTien(pthd.tongTien)}</span>
           </div>
           <p>Vui lòng chuyển khoản theo cú pháp:
-             <strong>HSD ${pthd.maPTHD} ${pthd.sdt}</strong>.
+             <strong>HSD ${pthd.maPTHD} ${pthd.sdt}</strong> trong vòng 7 ngày kể từ ngày lập phiếu.
           </p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
           <p style="color: #999; font-size: 12px; text-align: center;">© 2026 Homestay Dorm System</p>
