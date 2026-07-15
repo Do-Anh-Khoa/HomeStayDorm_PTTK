@@ -23,7 +23,8 @@ export async function getPhuTrachDashboardSnapshot({ maCn = null, maNv = null } 
         COUNT(*)::int AS total_beds,
         COUNT(*) FILTER (WHERE g.trang_thai = ${'Đang sử dụng'})::int AS occupied_beds,
         COUNT(*) FILTER (WHERE g.trang_thai = ${'Trống'})::int AS available_beds,
-        COUNT(*) FILTER (WHERE g.trang_thai = ${'Đã đặt cọc'})::int AS reserved_beds
+        COUNT(*) FILTER (WHERE g.trang_thai = ${'Đã đặt cọc'})::int AS reserved_beds,
+        COUNT(*) FILTER (WHERE g.trang_thai = ${'Đang trả phòng'})::int AS checking_out_beds
       FROM giuong g
       JOIN phong p ON p.ma_phong = g.ma_phong
       WHERE (${maCn}::varchar IS NULL OR p.chi_nhanh = ${maCn})
@@ -123,6 +124,7 @@ export async function getPhuTrachDashboardSnapshot({ maCn = null, maNv = null } 
       occupied: toNumber(roomStatus.occupied_beds),
       available: toNumber(roomStatus.available_beds),
       reserved: toNumber(roomStatus.reserved_beds),
+      checkingOut: toNumber(roomStatus.checking_out_beds),
     },
     contractsByMonth,
   }

@@ -149,6 +149,7 @@ export default function DashboardPhuTrach() {
     items: [
       { key: 'reserved', label: 'Đã đặt cọc', value: 0, color: '#a9bd97' },
       { key: 'occupied', label: 'Đang sử dụng', value: 0, color: '#3b4f27' },
+      { key: 'checking_out', label: 'Đang trả phòng', value: 0, color: '#b7791f' },
       { key: 'available', label: 'Trống', value: 0, color: '#e6ebe0' },
     ],
   })

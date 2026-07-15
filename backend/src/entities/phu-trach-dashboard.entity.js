@@ -15,6 +15,12 @@ function buildRoomStatusEntity(roomStatus) {
         color: '#4c6a3f',
       },
       {
+        key: 'checking_out',
+        label: 'Đang trả phòng',
+        value: roomStatus.checkingOut,
+        color: '#b7791f',
+      },
+      {
         key: 'available',
         label: 'Trống',
         value: roomStatus.available,
