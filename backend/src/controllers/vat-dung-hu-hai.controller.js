@@ -146,20 +146,15 @@ export const getVatDungHuHaiList = async (req, res, next) => {
     `
 
     const historyRows = await prisma.$queryRaw`
-      ${getBaseReturnRoomSql(nameSql, phoneSql, maCn)}
+  ${getBaseReturnRoomSql(nameSql, phoneSql, maCn)}
 
-      WHERE h.ghi_nhan_hu_hai = TRUE
-        AND DATE(h.ngay_tp) = CURRENT_DATE
-        AND ${buildSameBranchExistsSql(maCn)}
-        AND EXISTS (
-          SELECT 1
-          FROM vat_dung_hu_hai vdh
-          WHERE vdh.ma_tp = h.ma_tp
-            AND vdh.ma_nv = ${maNv}
-        )
+  WHERE h.ghi_nhan_hu_hai = TRUE
+    AND h.ma_hdt IS NOT NULL
+    AND DATE(h.ngay_tp) = CURRENT_DATE
+    AND ${buildSameBranchExistsSql(maCn)}
 
-      ORDER BY h.ngay_tp DESC, h.ma_tp DESC
-    `
+  ORDER BY h.ngay_tp DESC, h.ma_tp DESC
+`
 
     res.json({
       pending: pendingRows.map(mapReturnRoomRow),
