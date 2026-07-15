@@ -217,8 +217,8 @@ function DetailView({
       </div>
 
       <PageTitle
-        title="Ghi nhận bồi thường mất thẻ/chìa khóa"
-        description="Quản lý thông tin bồi thường đối với thẻ hoặc chìa khóa bị thất lạc."
+        title="Ghi nhận bồi thường mất thẻ ra vào"
+        description="Quản lý thông tin bồi thường đối với thẻ ra vào bị thất lạc."
       />
 
       <div style={S.detailCard}>
@@ -430,7 +430,7 @@ export default function BoiThuongPage() {
     <section style={S.page}>
       <PageTitle
         title="Ghi nhận bồi thường"
-        description="Tạo biên bản bồi thường cho khách hàng làm mất thẻ ra vào hoặc chìa khóa."
+        description="Tạo biên bản bồi thường cho khách hàng làm mất thẻ ra vào."
       />
 
       <div style={S.card}>

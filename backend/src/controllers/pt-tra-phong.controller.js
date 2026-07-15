@@ -700,6 +700,11 @@ export const getPtTraPhongPageData = async (req, res, next) => {
 
     const pendingWhere = [
       Prisma.sql`h.ngay_huy IS NULL`,
+
+  // Chỉ cho xem/lập phiếu với hồ sơ trả phòng từ hôm nay trở về trước.
+  // Không load các hồ sơ có ngày trả phòng ở tương lai.
+      Prisma.sql`DATE(h.ngay_tp) <= CURRENT_DATE`,
+
       buildSameBranchExistsSql(maCn),
       Prisma.sql`NOT EXISTS (
         SELECT 1
