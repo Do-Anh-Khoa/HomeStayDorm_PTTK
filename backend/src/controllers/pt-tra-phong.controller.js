@@ -699,19 +699,23 @@ export const getPtTraPhongPageData = async (req, res, next) => {
     const search = String(req.query?.search || '').trim()
 
     const pendingWhere = [
-      Prisma.sql`h.ngay_huy IS NULL`,
+    Prisma.sql`h.ngay_huy IS NULL`,
 
-  // Chỉ cho xem/lập phiếu với hồ sơ trả phòng từ hôm nay trở về trước.
-  // Không load các hồ sơ có ngày trả phòng ở tương lai.
-      Prisma.sql`DATE(h.ngay_tp) <= CURRENT_DATE`,
+    // Chỉ cho xem/lập phiếu với hồ sơ trả phòng từ hôm nay trở về trước.
+    // Không load các hồ sơ có ngày trả phòng ở tương lai.
+    Prisma.sql`DATE(h.ngay_tp) <= CURRENT_DATE`,
 
-      buildSameBranchExistsSql(maCn),
-      Prisma.sql`NOT EXISTS (
-        SELECT 1
-        FROM pt_tra_phong pttp_check
-        WHERE pttp_check.ma_tp = h.ma_tp
-      )`,
-    ]
+    // Nếu hồ sơ có HĐT thì bắt buộc đã ghi nhận vật dụng hư hại.
+    // Nếu hồ sơ không có HĐT thì không cần ghi nhận hư hại.
+    Prisma.sql`(h.ma_hdt IS NULL OR h.ghi_nhan_hu_hai = TRUE)`,
+
+    buildSameBranchExistsSql(maCn),
+    Prisma.sql`NOT EXISTS (
+      SELECT 1
+      FROM pt_tra_phong pttp_check
+      WHERE pttp_check.ma_tp = h.ma_tp
+    )`,
+  ]
 
     if (search) {
       pendingWhere.push(Prisma.sql`
