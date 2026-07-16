@@ -21,13 +21,13 @@ export const getBanGiaoPageData = async (req, res) => {
     }
     const { ma_cn } = employee
 
-    // 1. Danh sách chờ bàn giao (Chưa có trong bảng bien_ban_ban_giao, phiếu thu đã thanh toán/hợp lệ)
+    // 1. Danh sách chờ bàn giao
     const pendingList = await prisma.$queryRaw`
       SELECT 
         hdt.ma_hdt,
-        kh.ten_kh AS ten_khach_hang,
-        kh.ma_kh,
-        CONCAT(dcg.ma_phong, ' - ', dcg.ma_giuong) AS phong_giuong,
+        MAX(kh.ten_kh) AS ten_khach_hang,
+        MAX(kh.ma_kh) AS ma_kh,
+        STRING_AGG(DISTINCT CONCAT(dcg.ma_phong, ' - ', dcg.ma_giuong), ', ') AS phong_giuong,
         hdt.tg_vao AS ngay_ban_giao,
         pthd.trang_thai AS trang_thai_phieu_thu
       FROM hop_dong_thue hdt
@@ -41,15 +41,17 @@ export const getBanGiaoPageData = async (req, res) => {
       WHERE bb.ma_bb IS NULL
         AND pthd.trang_thai IN ('Đã thanh toán', 'Hợp lệ')
         AND p.chi_nhanh = ${ma_cn}
+      GROUP BY hdt.ma_hdt, hdt.tg_vao, pthd.trang_thai
       ORDER BY hdt.tg_vao DESC
     `
 
+    // 2. Danh sách lịch sử bàn giao
     const historyList = await prisma.$queryRaw`
       SELECT 
         hdt.ma_hdt,
-        kh.ten_kh AS ten_khach_hang,
-        kh.ma_kh,
-        CONCAT(dcg.ma_phong, ' - ', dcg.ma_giuong) AS phong_giuong,
+        MAX(kh.ten_kh) AS ten_khach_hang,
+        MAX(kh.ma_kh) AS ma_kh,
+        STRING_AGG(DISTINCT CONCAT(dcg.ma_phong, ' - ', dcg.ma_giuong), ', ') AS phong_giuong,
         bb.ngay_bg AS ngay_ban_giao,
         pthd.trang_thai AS trang_thai_phieu_thu,
         bb.ma_bb
@@ -62,6 +64,7 @@ export const getBanGiaoPageData = async (req, res) => {
       JOIN phong p ON dcg.ma_phong = p.ma_phong
       LEFT JOIN pt_hop_dong pthd ON hdt.ma_hdt = pthd.ma_hdt
       WHERE p.chi_nhanh = ${ma_cn}
+      GROUP BY bb.ma_bb, hdt.ma_hdt, bb.ngay_bg, pthd.trang_thai
       ORDER BY bb.ngay_bg DESC
     `
 
