@@ -39,26 +39,27 @@ export const getDanhSachLichHen = async (req, res) => {
 
     let rows
     if (ngay) {
+      // Lấy theo ngày cụ thể (Bảng chi tiết bên phải)
       rows = await prisma.$queryRaw`
-        SELECT lh.ma_lich, lh.tg_hen, lh.ma_dk, hsdk.trang_thai AS trang_thai_ho_so,
-               kh.ma_kh, kh.ten_kh, kh.email, kh.sdt
+        SELECT lh.ma_lich, lh.ma_dk, lh.tg_hen,
+               kh.ten_kh, kh.sdt, hsdk.trang_thai
         FROM lich_hen_xem_phong lh
         JOIN ho_so_dang_ky hsdk ON lh.ma_dk = hsdk.ma_dk
         JOIN khach_hang kh ON hsdk.khach_hang = kh.ma_kh
-        WHERE lh.nv_sale = ${maNV} AND lh.tg_hen::date = ${ngay}::date
+        WHERE lh.nv_sale = ${employee.ma_nv}
+          -- Ép về múi giờ VN trước khi so sánh ngày
+          AND (lh.tg_hen AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = ${ngay}::date
         ORDER BY lh.tg_hen ASC
       `
     } else if (thang && nam) {
+      // Lấy theo tháng/năm (Đổ badge lên Calendar)
       rows = await prisma.$queryRaw`
-        SELECT lh.ma_lich, lh.tg_hen, lh.ma_dk, hsdk.trang_thai AS trang_thai_ho_so,
-               kh.ma_kh, kh.ten_kh, kh.email, kh.sdt
+        SELECT lh.ma_lich, lh.ma_dk, lh.tg_hen
         FROM lich_hen_xem_phong lh
-        JOIN ho_so_dang_ky hsdk ON lh.ma_dk = hsdk.ma_dk
-        JOIN khach_hang kh ON hsdk.khach_hang = kh.ma_kh
-        WHERE lh.nv_sale = ${maNV}
-          AND EXTRACT(MONTH FROM lh.tg_hen) = ${Number(thang)}
-          AND EXTRACT(YEAR FROM lh.tg_hen) = ${Number(nam)}
-        ORDER BY lh.tg_hen ASC
+        WHERE lh.nv_sale = ${employee.ma_nv}
+          -- Ép về múi giờ VN trước khi rút trích Tháng/Năm
+          AND EXTRACT(MONTH FROM (lh.tg_hen AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')) = ${Number(thang)}
+          AND EXTRACT(YEAR FROM (lh.tg_hen AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')) = ${Number(nam)}
       `
     } else {
       rows = await prisma.$queryRaw`
