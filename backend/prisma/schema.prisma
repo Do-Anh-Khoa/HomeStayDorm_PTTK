@@ -44,15 +44,17 @@ model chi_nhanh {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model chi_tiet_dv {
-  ma_ct      Int      @id @default(autoincrement())
-  so_luong   Int
-  ngay       DateTime @default(now()) @db.Timestamp(6)
-  thanh_tien Decimal  @db.Decimal(12, 2)
-  trang_thai String
-  ma_dv      String   @db.VarChar(20)
-  ma_phong   String   @db.VarChar(20)
-  dich_vu    dich_vu  @relation(fields: [ma_dv], references: [ma_dv], onDelete: NoAction, onUpdate: NoAction)
-  phong      phong    @relation(fields: [ma_phong], references: [ma_phong], onDelete: NoAction, onUpdate: NoAction)
+  ma_ct        Int           @id @default(autoincrement())
+  so_luong     Int
+  ngay         DateTime      @default(now()) @db.Timestamp(6)
+  thanh_tien   Decimal       @db.Decimal(12, 2)
+  trang_thai   String
+  ma_dv        String        @db.VarChar(20)
+  ma_phong     String        @db.VarChar(20)
+  ma_pttp      String?       @db.VarChar(20)
+  dich_vu      dich_vu       @relation(fields: [ma_dv], references: [ma_dv], onDelete: NoAction, onUpdate: NoAction)
+  phong        phong         @relation(fields: [ma_phong], references: [ma_phong], onDelete: NoAction, onUpdate: NoAction)
+  pt_tra_phong pt_tra_phong? @relation(fields: [ma_pttp], references: [ma_pttp], onUpdate: NoAction, map: "fk_chi_tiet_dv_pttp")
 
   @@index([ma_dv], map: "idx_chi_tiet_dv_ma_dv")
   @@index([ma_phong], map: "idx_chi_tiet_dv_ma_phong")
@@ -63,7 +65,7 @@ model dat_coc_giuong {
   ma_pdc        String        @db.VarChar(20)
   ma_phong      String        @db.VarChar(20)
   ma_giuong     String        @db.VarChar(20)
-  trang_thai    String
+  trang_thai    String?
   phieu_dat_coc phieu_dat_coc @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: Cascade, onUpdate: NoAction)
   giuong        giuong        @relation(fields: [ma_phong, ma_giuong], references: [ma_phong, ma_giuong], onDelete: NoAction, onUpdate: NoAction)
 
@@ -102,32 +104,30 @@ model ho_so_dang_ky {
   trang_thai                                      String
   chi_nhanh                                       String               @db.VarChar(20)
   khach_hang                                      String               @db.VarChar(20)
-  nv_sale                                         String?              @db.VarChar(20)
+  nv_sale                                         String               @db.VarChar(20)
   chi_nhanh_ho_so_dang_ky_chi_nhanhTochi_nhanh    chi_nhanh            @relation("ho_so_dang_ky_chi_nhanhTochi_nhanh", fields: [chi_nhanh], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
   khach_hang_ho_so_dang_ky_khach_hangTokhach_hang khach_hang           @relation("ho_so_dang_ky_khach_hangTokhach_hang", fields: [khach_hang], references: [ma_kh], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien                                        nhanvien?            @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien                                        nhanvien             @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   lich_hen_xem_phong                              lich_hen_xem_phong[]
 
   @@index([chi_nhanh], map: "idx_ho_so_dang_ky_chi_nhanh")
   @@index([khach_hang], map: "idx_ho_so_dang_ky_khach_hang")
-  @@index([nv_sale], map: "idx_ho_so_dang_ky_nv_sale")
 }
 
 model ho_so_tra_phong {
-  ma_tp              String               @id @default(dbgenerated("('HSTP'::text || lpad((nextval('ho_so_tra_phong_ma_tp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
-  ngay_tp            DateTime             @default(now()) @db.Timestamp(6)
-  ngay_huy           DateTime?            @db.Timestamp(6)
-  nv_sale            String               @db.VarChar(20)
-  ma_pdc             String               @db.VarChar(20)
-  ma_hdt             String?              @db.VarChar(20)
-  ma_khach_thue      String?              @db.VarChar(20)
-  ghi_nhan_hu_hai    Boolean              @default(false)
-  khach_thue         khach_thue?          @relation(fields: [ma_khach_thue, ma_hdt], references: [ma_kh, ma_hdt], onDelete: NoAction, onUpdate: NoAction)
-  phieu_dat_coc      phieu_dat_coc        @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien           nhanvien             @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
-  lich_hen_tra_phong lich_hen_tra_phong[]
-  pt_tra_phong       pt_tra_phong[]
-  vat_dung_hu_hai    vat_dung_hu_hai[]
+  ma_tp           String            @id @default(dbgenerated("('HSTP'::text || lpad((nextval('ho_so_tra_phong_ma_tp_seq'::regclass))::text, 3, '0'::text))")) @db.VarChar(20)
+  ngay_tp         DateTime?         @default(now()) @db.Timestamp(6)
+  ngay_huy        DateTime?         @db.Timestamp(6)
+  nv_sale         String            @db.VarChar(20)
+  ma_pdc          String            @db.VarChar(20)
+  ma_hdt          String?           @db.VarChar(20)
+  ma_khach_thue   String?           @db.VarChar(20)
+  ghi_nhan_hu_hai Boolean           @default(false)
+  khach_thue      khach_thue?       @relation(fields: [ma_khach_thue, ma_hdt], references: [ma_kh, ma_hdt], onDelete: NoAction, onUpdate: NoAction)
+  phieu_dat_coc   phieu_dat_coc     @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien        nhanvien          @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  pt_tra_phong    pt_tra_phong[]
+  vat_dung_hu_hai vat_dung_hu_hai[]
 
   @@index([ma_hdt], map: "idx_ho_so_tra_phong_ma_hdt")
 }
@@ -176,17 +176,6 @@ model khach_thue {
   @@id([ma_kh, ma_hdt])
 }
 
-model lich_hen_tra_phong {
-  ma_lich         Int             @id @default(autoincrement())
-  tg_hen          DateTime        @db.Timestamp(6)
-  ma_tp           String          @db.VarChar(20)
-  nv_sale         String          @db.VarChar(20)
-  ho_so_tra_phong ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: Cascade, onUpdate: NoAction)
-  nhanvien        nhanvien        @relation(fields: [nv_sale], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([ma_tp, tg_hen], map: "idx_lich_hen_tra_phong_ma_tp_tg_hen")
-}
-
 model lich_hen_xem_phong {
   ma_lich       Int           @id @default(autoincrement())
   tg_hen        DateTime      @db.Timestamp(6)
@@ -225,7 +214,6 @@ model nhanvien {
   ho_so_dang_ky                                     ho_so_dang_ky[]
   ho_so_tra_phong                                   ho_so_tra_phong[]
   hop_dong_thue                                     hop_dong_thue[]
-  lich_hen_tra_phong                                lich_hen_tra_phong[]
   lich_hen_xem_phong                                lich_hen_xem_phong[]
   chi_nhanh                                         chi_nhanh            @relation(fields: [ma_cn], references: [ma_cn], onDelete: NoAction, onUpdate: NoAction)
   phieu_dat_coc                                     phieu_dat_coc[]
@@ -298,10 +286,10 @@ model pt_boi_thuong {
   trang_thai                                   String
   tong_tien                                    Decimal    @db.Decimal(12, 2)
   nv_ke_toan                                   String     @db.VarChar(20)
-  nv_cap_nhat                                  String     @db.VarChar(20)
+  nv_cap_nhat                                  String?    @db.VarChar(20)
   ma_bt                                        String     @db.VarChar(20)
   boi_thuong                                   boi_thuong @relation(fields: [ma_bt], references: [ma_bt], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien_pt_boi_thuong_nv_cap_nhatTonhanvien nhanvien   @relation("pt_boi_thuong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_boi_thuong_nv_cap_nhatTonhanvien nhanvien?  @relation("pt_boi_thuong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   nhanvien                                     nhanvien   @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([nv_cap_nhat], map: "idx_pt_boi_thuong_nv_cap_nhat")
@@ -316,10 +304,10 @@ model pt_dat_coc {
   trang_thai                                String
   tong_tien                                 Decimal       @db.Decimal(12, 2)
   nv_ke_toan                                String        @db.VarChar(20)
-  nv_cap_nhat                               String        @db.VarChar(20)
+  nv_cap_nhat                               String?       @db.VarChar(20)
   ma_pdc                                    String        @db.VarChar(20)
   phieu_dat_coc                             phieu_dat_coc @relation(fields: [ma_pdc], references: [ma_pdc], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien_pt_dat_coc_nv_cap_nhatTonhanvien nhanvien      @relation("pt_dat_coc_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_dat_coc_nv_cap_nhatTonhanvien nhanvien?     @relation("pt_dat_coc_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   nhanvien                                  nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([ma_pdc], map: "idx_pt_dat_coc_ma_pdc")
@@ -335,10 +323,10 @@ model pt_hop_dong {
   trang_thai                                 String
   tong_tien                                  Decimal       @db.Decimal(12, 2)
   nv_ke_toan                                 String        @db.VarChar(20)
-  nv_cap_nhat                                String        @db.VarChar(20)
+  nv_cap_nhat                                String?       @db.VarChar(20)
   ma_hdt                                     String        @db.VarChar(20)
   hop_dong_thue                              hop_dong_thue @relation(fields: [ma_hdt], references: [ma_hdt], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien_pt_hop_dong_nv_cap_nhatTonhanvien nhanvien      @relation("pt_hop_dong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_hop_dong_nv_cap_nhatTonhanvien nhanvien?     @relation("pt_hop_dong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   nhanvien                                   nhanvien      @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([ma_hdt], map: "idx_pt_hop_dong_ma_hdt")
@@ -356,10 +344,11 @@ model pt_tra_phong {
   tien_hoan_coc                               Decimal         @db.Decimal(12, 2)
   tien_khau_tru                               Decimal         @db.Decimal(12, 2)
   nv_ke_toan                                  String          @db.VarChar(20)
-  nv_cap_nhat                                 String          @db.VarChar(20)
+  nv_cap_nhat                                 String?         @db.VarChar(20)
   ma_tp                                       String          @db.VarChar(20)
+  chi_tiet_dv                                 chi_tiet_dv[]
   ho_so_tra_phong                             ho_so_tra_phong @relation(fields: [ma_tp], references: [ma_tp], onDelete: NoAction, onUpdate: NoAction)
-  nhanvien_pt_tra_phong_nv_cap_nhatTonhanvien nhanvien        @relation("pt_tra_phong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
+  nhanvien_pt_tra_phong_nv_cap_nhatTonhanvien nhanvien?       @relation("pt_tra_phong_nv_cap_nhatTonhanvien", fields: [nv_cap_nhat], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
   nhanvien                                    nhanvien        @relation(fields: [nv_ke_toan], references: [ma_nv], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([nv_cap_nhat], map: "idx_pt_tra_phong_nv_cap_nhat")
