@@ -309,14 +309,14 @@ export async function createHoSoTraPhong({
       maPdc: created.hstp.ma_pdc,
       maHopDong: created.hstp.ma_hdt,
       maKhachThue: created.hstp.ma_khach_thue,
-      ngayLap: created.hstp.ngay_tp, // Lúc này ngay_tp đã là expectedReturnDate
+      ngayLap: created.hstp.ngay_tp, 
       tgHen: created.hstp.ngay_tp,
       mailInfo: created.mailInfo,
       canSendEmail: true,
     }
   }
 
-  // 2. TRƯỜNG HỢP CHỈ CÓ PHIẾU ĐẶT CỌC
+  // 2. TRƯỜNG HỢP CHỈ CÓ PHIẾU ĐẶT CỌC (HỦY CỌC)
   const deposit = await prisma.phieu_dat_coc.findUnique({
     where: { ma_pdc: maPDC },
     select: { ma_pdc: true, khach_dat: true, trang_thai: true },
@@ -370,6 +370,14 @@ export async function createHoSoTraPhong({
   }
 
   const created = await prisma.$transaction(async (tx) => {
+    // 2.1. Cập nhật trạng thái trong bảng đặt cọc giường
+    await tx.$executeRaw`
+      UPDATE dat_coc_giuong
+      SET trang_thai = 'Hoàn cọc'
+      WHERE ma_pdc = ${deposit.ma_pdc}
+    `
+
+    // 2.2. Lập hồ sơ trả phòng
     const insertedRows = await tx.$queryRaw`
       INSERT INTO ho_so_tra_phong (nv_sale, ma_pdc, ma_hdt, ma_khach_thue, ghi_nhan_hu_hai, ngay_tp)
       VALUES (${maNVSale}, ${deposit.ma_pdc}, NULL, NULL, FALSE, ${expectedReturnDate}::timestamp)
