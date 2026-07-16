@@ -166,7 +166,7 @@ function PhieuDatCocListView({ onSelectPDC }) {
               <th className="px-5 py-5">Khách hàng</th>
               <th className="px-5 py-5">CCCD/SĐT</th>
               <th className="px-5 py-5">Phòng/Giường</th>
-              <th className="px-5 py-5">Ngày lập</th>
+              <th className="px-5 py-5">Ngày đặt cọc</th>
               <th className="px-5 py-5 text-right">Số tiền cọc</th>
               <th className="px-5 py-5">Hạn thanh toán</th>
               <th className="px-5 py-5">Trạng thái</th>
@@ -339,7 +339,7 @@ function PhieuDatCocDetailView({ phieu, onBack,onCreateNewPDC }) {
       </div>
       <div className="grid grid-cols-2 gap-y-5 gap-x-6 p-5">
         <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Mã phiếu</span><span className="text-[15px] font-bold text-[#111827]">{phieu.maPDC}</span></div>
-        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Ngày lập</span><span className="text-[15px] text-[#111827]">{phieu.ngayLap}</span></div>
+        <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Ngày đặt cọc</span><span className="text-[15px] text-[#111827]">{phieu.ngayLap}</span></div>
         <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">Tên khách hàng</span><span className="text-[15px] font-bold text-[#111827]">{phieu.tenKH}</span></div>
         <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">SĐT</span><span className="text-[15px] text-[#111827]">{phieu.sdt || phieu.cccd}</span></div>
         <div><span className="block text-[11px] font-bold text-[#6b7280] uppercase">CCCD/CMND</span><span className="text-[15px] text-[#111827]">{phieu.cccd}</span></div>
